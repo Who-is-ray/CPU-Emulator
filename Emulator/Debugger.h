@@ -15,7 +15,7 @@ public:
 	bool load_SRecord();
 
 private:
-	std::string memory[SIZE_OF_MEMORY];	//is it ok that memory is an element of debugger??
+	std::string* memory;	//is it ok that memory is an element of debugger??
 
 
 };

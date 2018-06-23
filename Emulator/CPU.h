@@ -3,7 +3,7 @@
 #pragma once
 #include<string>
 
-#define SIZE_OF_REGISTER
+#define SIZE_OF_REGISTER 8
 
 class CPU
 {
@@ -12,6 +12,6 @@ public:
 	~CPU();
 
 private:
-	std::string Register[SIZE_OF_REGISTER];
+	std::string* Register;
 };
 
