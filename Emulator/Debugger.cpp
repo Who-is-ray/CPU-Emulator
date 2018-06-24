@@ -220,6 +220,7 @@ void Debugger::run_debugger()
 			{
 				m_CPU.fetch();
 				m_CPU.decode();
+				m_CPU.execute();
 			}
 			break;
 		}

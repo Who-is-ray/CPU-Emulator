@@ -56,7 +56,7 @@ void CPU::bus(bool read_write, bool byte_word = 1)
 		{
 			low_byte = m_memory[MAR];
 			high_byte = m_memory[MAR + 1];
-			MDR += high_byte;	//load high byte to MDR
+			MDR = high_byte;	//load high byte to MDR
 			MDR = MDR << 8;	//shift data to high byte of MDR
 			MDR += low_byte;	//load low byte to MDR
 		}
@@ -126,5 +126,174 @@ void CPU::decode()
 //CPU execute function, emulate execute routine
 void CPU::execute()
 {
-	
+	switch (opcode)
+	{
+	case 0:	//Opcode = 000 (BL)
+	{
+
+		break;
+	}
+	case 6:	//Opcode = 110 (LDR)
+	{
+
+		break;
+	}
+	case 7:	//Opcode = 111 (STR)
+	{
+
+		break;
+	}
+	case 8:	//Opcode = 001000 (BEQ/BZ)
+	{
+
+		break;
+	}
+	case 9:	//Opcode = 001001 (BNE/BNZ)
+	{
+
+		break;
+	}
+	case 10:	//Opcode = 001010 (BC/BHS)
+	{
+
+		break;
+	}
+	case 11:	//Opcode = 001011 (BNC/BLO)
+	{
+
+		break;
+	}
+	case 12:	//Opcode = 001100 (BN)
+	{
+
+		break;
+	}
+	case 13:	//Opcode = 001101 (BGE)
+	{
+
+		break;
+	}
+	case 14:	//Opcode = 001110 (BLT)
+	{
+
+		break;
+	}
+	case 15:	//Opcode = 001111 (BAL)
+	{
+
+		break;
+	}
+	case 16:	//Opcode = 10000 (LD)
+	{
+
+		break;
+	}
+	case 17:	//Opcode = 10000 (ST)
+	{
+
+		break;
+	}
+	case 18:	//Opcode = 10010 (MOVL)
+	{
+
+		break;
+	}
+	case 19:	//Opcode = 10011 (MOVLZ)
+	{
+
+		break;
+	}
+	case 20:	//Opcode = 10100 (MOVH)
+	{
+
+		break;
+	}
+	case 96:	//Opcode = 0110 0000 (ADD)
+	{
+
+		break;
+	}
+	case 98:	//Opcode = 0110 0010 (ADDC)
+	{
+
+		break;
+	}
+	case 100:	//Opcode = 0110 0100 (SUB)
+	{
+
+		break;
+	}
+	case 102:	//Opcode = 0110 0110 (SUBC)
+	{
+
+		break;
+	}
+	case 104:	//Opcode = 0110 1000 (DADD)
+	{
+
+		break;
+	}
+	case 106:	//Opcode = 0110 1010 (CMP)
+	{
+
+		break;
+	}
+	case 108:	//Opcode = 0110 1100 (XOR)
+	{
+
+		break;
+	}
+	case 110:	//Opcode = 0110 1110 (AND)
+	{
+
+		break;
+	}
+	case 112:	//Opcode = 0111 0000 (BIT)
+	{
+
+		break;
+	}
+	case 113:	//Opcode = 0111 0001 (SRA)
+	{
+
+		break;
+	}
+	case 114:	//Opcode = 0111 0010 (BIC)
+	{
+
+		break;
+	}
+	case 115:	//Opcode = 0111 0011 (RRC)
+	{
+
+		break;
+	}
+	case 116:	//Opcode = 0111 0100 (BIS)
+	{
+
+		break;
+	}
+	case 117:	//Opcode = 0111 0101 (SWPB)
+	{
+
+		break;
+	}
+	case 118:	//Opcode = 0111 0110 (MOV)
+	{
+
+		break;
+	}
+	case 119:	//Opcode = 0111 0111 (SXT)
+	{
+
+		break;
+	}
+	case 120:	//Opcode = 0111 1000 (SWAP)
+	{
+
+		break;
+	}
+	default:
+		break;
+	}
 }
