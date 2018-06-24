@@ -216,9 +216,10 @@ void Debugger::run_debugger()
 		}
 		case 11:	//run CPU
 		{
-			while (1)
+			while (1)	//fetch-decode-execute cycle
 			{
 				m_CPU.fetch();
+				m_CPU.decode();
 			}
 			break;
 		}

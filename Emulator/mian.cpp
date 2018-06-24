@@ -1,10 +1,10 @@
-#if 0	//real main
+#if 1	//real main
 //
 
 #include <iostream>
 #include "Debugger.h"
 
-int main()
+int main()	//starting point of the program
 {
 	Debugger m_debugger;
 	m_debugger.run_debugger();
@@ -26,10 +26,10 @@ int main()
 	unsigned char a = 255;
 	unsigned char b = 2;
 	int c = 4;
-	unsigned short d = 0xff00;
-
+	unsigned short d = a;
+	a = d >> 8;
 	short f = d << 1;
-	std::cout << d+a <<std::endl;
+	std::cout << d <<std::endl;
 
 	system("pause");
 	return 0;
