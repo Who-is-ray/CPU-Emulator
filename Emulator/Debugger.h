@@ -3,6 +3,8 @@
 
 #include<list>
 
+class CPU;
+
 class Debugger
 {
 public:
@@ -10,7 +12,7 @@ public:
 	~Debugger();	//destructor
 
 	void run_debugger();	//function to run debugger called by main
-	bool load_SRecord(unsigned char* memory);	//The function to load S-Record data to memory
+	bool load_SRecord(unsigned char* memory, CPU& m_CPU);	//The function to load S-Record data to memory
 
 	void add_PC_BP();	//add a new break point triggered by program counter
 	void add_clk_BP();	//add a new break point triggered by CPU clock

@@ -1,4 +1,4 @@
-#if 1
+#if 1	//real main
 //
 
 #include <iostream>
@@ -14,7 +14,7 @@ int main()
 }
 
 
-#else
+#else	//test
 
 #include <iostream>
 
@@ -27,12 +27,9 @@ int main()
 	char a = 255;
 	char b = 2;
 	int c = 4;
-	std::cout << a + b<<std::endl;
-	if (isxdigit(str[0]))
-	{
-		number = strtol(str.c_str(), NULL, 16/*base of hexdecimal*/);
-		printf("The hexadecimal number %lx is %ld.\n", number, number);
-	}
+	short d = 8;
+	short f = d << 1;
+	std::cout << f<<std::endl;
 
 	system("pause");
 	return 0;

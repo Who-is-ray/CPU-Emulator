@@ -3,8 +3,6 @@
 #pragma once
 #include<string>
 
-class Debugger;
-
 class CPU
 {
 public:
@@ -17,5 +15,7 @@ public:
 private:
 	unsigned short* Register_file;	//register file
 	unsigned char* m_memory;	//memory pointer
+	unsigned short MAR;	//memory address register
+	unsigned short MDR;	//memory data register
+	unsigned short IR;	//instruction register
 };
-

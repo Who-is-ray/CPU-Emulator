@@ -9,6 +9,7 @@
 #define BASE_OF_HEX 16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD 10	//minimun size of S-Record
 #define START_BIT_OF_COUNT 2	//start bit of count of S-Record
+#define ADDRESS_OF_PROGRAM_COUNTER 7	//address of program counter
 
 bool is_running;	//indicate whether debugger should keep running
 
@@ -16,7 +17,8 @@ bool is_running;	//indicate whether debugger should keep running
 int help_func()
 {
 	int user_cmd;	//user's command
-	std::cout << "\nCommand list:\n1. Load S-Record file\n"
+	std::cout << "\nCommand list:\n"
+		<< "1. Load S-Record file\n"
 		<< "2. Add a Program Counter break point\n"
 		<< "3. Add a CPU clock break point\n"
 		<< "4. Delete a Program Counter break point\n"
@@ -26,7 +28,7 @@ int help_func()
 		<< "8. Display a data from a register\n"
 		<< "9. Update a data from a memory\n"
 		<< "10. Update a data from a register\n"
-		<< ". Run CPU\n"
+		<< "11. Run CPU\n"
 		<<"\nChoose a command, type the number of command:	";
 	std::cin >> user_cmd;
 	return user_cmd;
@@ -56,7 +58,7 @@ Debugger::~Debugger()
 	The function to load S-Record data to memory
 	Return loading result true if loading successfully, false if has problem
 */
-bool Debugger::load_SRecord(unsigned char* memory)
+bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 {
 	std::string SRecord_fileName;
 	std::cout << "Input the file name of S-Record file: ";	//ask user for file name
@@ -69,34 +71,45 @@ bool Debugger::load_SRecord(unsigned char* memory)
 		while (std::getline(SRecord_file, line))	//reading lines from input file
 		{
 			int record_size = line.size();
-			if (record_size >= MIM_SIZE_OF_SRECORD)	//check record condition is correct
+			std::string type = line.substr(0, 2);	//get the record type:S0,S1,S9	
+
+			if (type=="S1" && record_size >= MIM_SIZE_OF_SRECORD)	// If it is S1 Record and record condition is correct
+			{
+				int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer	magic number??
+				short address = static_cast<short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
+				char sum = count 
+					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX)) 
+					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX));	//create sum = count + address.ll +address.hh
+				for (size_t i = 8; i < line.size()-2; i+=2)	//start load data to memory
 				{
-				std::string type = line.substr(0, 2);	//get the record type:S0,S1,S9	
-				if (type=="S1")	// If it is S1 Record
-				{
-					int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer	magic number??
-					short address = static_cast<short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
-					char sum = count + static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX)) + static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX));	//create sum = count + address.ll +address.hh
-					for (size_t i = 8; i < line.size()-2; i+=2)	//start load data to memory
-					{
-						unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data to char
-						sum += data;
-						memory[address] = data;	//load data to memory
-						address++;	//update destination address
-					}
-					sum += (char)strtol(line.substr(line.size()-2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
-					if ((int)sum != -1)	//check sum = ff
-					{	//if check sum not correct
-						rtv = false;	//return false
-						std::cout << line << " --check sum not correct\n";
-						break;
-					}
+					unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data to char
+					sum += data;
+					memory[address] = data;	//load data to memory
+					address++;	//update destination address
+				}
+				sum += (char)strtol(line.substr(line.size()-2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
+				if ((int)sum != -1)	//check sum = ff
+				{	//if check sum not correct
+					rtv = false;	//return false
+					std::cout << line << " --check sum not correct\n";
+					break;
 				}
 			}
-			else
-			{	// if line size < minimum size, error
-				std::cout << "Record has mistake\n";
-				break;
+			else if (type=="S9")	
+			{
+				int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer
+				unsigned short PC = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
+				char sum = count 
+					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX)) 
+					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX)) 
+					+ (char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//create sum = count + PC.ll +PC.hh
+				m_CPU.set_register_val(ADDRESS_OF_PROGRAM_COUNTER, PC);
+				if ((int)sum != -1)	//check sum = ff
+				{	//if check sum not correct
+					rtv = false;	//return false
+					std::cout << line << " --check sum not correct\n";
+					break;
+				}
 			}
 		}
 	}
@@ -104,7 +117,10 @@ bool Debugger::load_SRecord(unsigned char* memory)
 	return rtv;
 }
 
-//function to run debugger called by main
+/*
+	function to run debugger called by main
+	accept user's command
+*/
 void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
@@ -125,7 +141,7 @@ void Debugger::run_debugger()
 			bool is_load = false;
 			while (!is_load)	//??need comment?
 			{
-				is_load = load_SRecord(memory);	//Call loading function
+				is_load = load_SRecord(memory, m_CPU);	//Call loading function
 				if (!is_load)	//if loading failed
 					std::cout << "Loading failed! Try again!\n";
 			}
@@ -168,7 +184,7 @@ void Debugger::run_debugger()
 		case 8:	//display data from a specific register
 		{
 			int address;
-			std::cout << "Type in the address of the memory to display: ";
+			std::cout << "Type in the address of the register to display: ";
 			std::cin >> address;
 			printf("Data in that register is %02lx\n", m_CPU.get_register_val(address));	//display hex decimal of the specific register value
 			break;
@@ -199,6 +215,7 @@ void Debugger::run_debugger()
 		}
 	}
 	
+	//memeory test output
 	/*for (size_t i = 200; i < 500; i++)
 	{
 		std::cout << i << "\t";
