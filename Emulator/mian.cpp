@@ -1,4 +1,4 @@
-#if 1	//real main
+#if 0	//real main
 //
 
 #include <iostream>
@@ -22,14 +22,14 @@ int main()
 
 int main()
 {
-	std::string str = "3D";
 	char number;
-	char a = 255;
-	char b = 2;
+	unsigned char a = 255;
+	unsigned char b = 2;
 	int c = 4;
-	short d = 8;
+	unsigned short d = 0xff00;
+
 	short f = d << 1;
-	std::cout << f<<std::endl;
+	std::cout << d+a <<std::endl;
 
 	system("pause");
 	return 0;

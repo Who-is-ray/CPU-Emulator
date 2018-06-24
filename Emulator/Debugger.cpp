@@ -5,11 +5,11 @@
 #include "CPU.h"	//header file of CPU class
 #include <signal.h>	//Signal handling software
 
-#define SIZE_OF_MEMORY 65536	//size of memory
-#define BASE_OF_HEX 16	//base of hexdecimal
-#define MIM_SIZE_OF_SRECORD 10	//minimun size of S-Record
-#define START_BIT_OF_COUNT 2	//start bit of count of S-Record
-#define ADDRESS_OF_PROGRAM_COUNTER 7	//address of program counter
+#define SIZE_OF_MEMORY	65536	//size of memory
+#define BASE_OF_HEX	16	//base of hexdecimal
+#define MIM_SIZE_OF_SRECORD	10	//minimun size of S-Record
+#define START_BIT_OF_COUNT	2	//start bit of count of S-Record
+#define ADDRESS_OF_PROGRAM_COUNTER	7	//address of program counter
 
 bool is_running;	//indicate whether debugger should keep running
 
@@ -73,21 +73,21 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 			int record_size = line.size();
 			std::string type = line.substr(0, 2);	//get the record type:S0,S1,S9	
 
-			if (type=="S1" && record_size >= MIM_SIZE_OF_SRECORD)	// If it is S1 Record and record condition is correct
+			if (type == "S1" && record_size >= MIM_SIZE_OF_SRECORD)	// If it is S1 Record and record condition is correct
 			{
 				int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer	magic number??
 				short address = static_cast<short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
-				char sum = count 
-					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX)) 
+				char sum = count
+					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
 					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX));	//create sum = count + address.ll +address.hh
-				for (size_t i = 8; i < line.size()-2; i+=2)	//start load data to memory
+				for (size_t i = 8; i < line.size() - 2; i += 2)	//start load data to memory
 				{
 					unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data to char
 					sum += data;
 					memory[address] = data;	//load data to memory
 					address++;	//update destination address
 				}
-				sum += (char)strtol(line.substr(line.size()-2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
+				sum += (char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
 				if ((int)sum != -1)	//check sum = ff
 				{	//if check sum not correct
 					rtv = false;	//return false
@@ -95,15 +95,15 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 					break;
 				}
 			}
-			else if (type=="S9")	
+			else if (type == "S9" && record_size == 10)	// If it is S9 Record and record condition is correct
 			{
 				int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer
 				unsigned short PC = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
-				char sum = count 
-					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX)) 
-					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX)) 
+				char sum = count
+					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
+					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX))
 					+ (char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//create sum = count + PC.ll +PC.hh
-				m_CPU.set_register_val(ADDRESS_OF_PROGRAM_COUNTER, PC);
+				m_CPU.set_register_val(ADDRESS_OF_PROGRAM_COUNTER, PC);	//set Program Counter value
 				if ((int)sum != -1)	//check sum = ff
 				{	//if check sum not correct
 					rtv = false;	//return false
@@ -111,6 +111,10 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 					break;
 				}
 			}
+			else if (type == "S0")
+			{}
+			else
+				rtv = false;
 		}
 	}
 
@@ -208,6 +212,14 @@ void Debugger::run_debugger()
 			std::cout << "Type in the four digits hex value of data to update: ";
 			std::cin >> data;
 			m_CPU.set_register_val(address, static_cast<unsigned short>(strtol(data.c_str(), NULL, BASE_OF_HEX)));	//update hex decimal of the specific register value
+			break;
+		}
+		case 11:	//run CPU
+		{
+			while (1)
+			{
+				m_CPU.fetch();
+			}
 			break;
 		}
 		default:	//other wise
