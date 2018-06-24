@@ -1,26 +1,55 @@
 #include "Debugger.h"
 #include <iostream>	//library for cin
-#include <fstream>	// Input/output stream class to operate on files
-#include <string>	// library for string
-#include "CPU.h"
+#include <fstream>	//Input/output stream class to operate on files
+#include <string>	//library for string
+#include "CPU.h"	//header file of CPU class
+#include <signal.h>	//Signal handling software
 
 #define SIZE_OF_MEMORY 65536	//size of memory
 #define BASE_OF_HEX 16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD 10	//minimun size of S-Record
 #define START_BIT_OF_COUNT 2	//start bit of count of S-Record
 
-int help_func();
+bool is_running;	//indicate whether debugger should keep running
+
+//Function to display help list
+int help_func()
+{
+	int user_cmd;	//user's command
+	std::cout << "\nCommand list:\n1. Load S-Record file\n"
+		<< "2. Add a Program Counter break point\n"
+		<< "3. Add a CPU clock break point\n"
+		<< "4. Delete a Program Counter break point\n"
+		<< "5. Delete a clock break point\n"
+		<< "6. Display all break point(s)\n"
+		<< "7. Display a data from a memory\n"
+		<< "8. Display a data from a register\n"
+		<< "9. Update a data from a memory\n"
+		<< "10. Update a data from a register\n"
+		<< ". Run CPU\n"
+		<<"\nChoose a command, type the number of command:	";
+	std::cin >> user_cmd;
+	return user_cmd;
+}
+
+/*
+- Invoked when SIGINT (control-C) is detected
+- changes state of waiting_for_signal
+- signal must be reinitialized
+*/
+void sigint_hdlr()
+{
+	is_running = false;
+}
 
 //constructor
 Debugger::Debugger()	
 {
-	//memory = new unsigned char[SIZE_OF_MEMORY];	//initialize memory
 }
 
 //destructor
 Debugger::~Debugger()	
 {
-	//delete memory;	//delete memory
 }
 
 /*
@@ -78,15 +107,19 @@ bool Debugger::load_SRecord(unsigned char* memory)
 //function to run debugger called by main
 void Debugger::run_debugger()
 {
-	unsigned char* memory = new unsigned char[SIZE_OF_MEMORY];	//initialize memory
+	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
+	unsigned char memory[SIZE_OF_MEMORY] = {NULL};	//initialize memory
 	CPU m_CPU(memory);
 	int user_cmd=0;	//user's command
+	is_running = true;
 
-	// print help and ask user for command
-	user_cmd = help_func();
-
-	switch (user_cmd)
+	while (is_running)
 	{
+		// print help and ask user for command
+		user_cmd = help_func();
+
+		switch (user_cmd)
+		{
 		case 1:	//Load S-Record
 		{
 			bool is_load = false;
@@ -98,8 +131,72 @@ void Debugger::run_debugger()
 			}
 			break;
 		}
-		default:
+		case 2:	//add new PC break point
+		{
+			add_PC_BP();
 			break;
+		}
+		case 3:	//add new clock break point
+		{
+			add_clk_BP();
+			break;
+		}
+		case 4:	//delete a break point from PC list
+		{
+			dlt_PC_BP();
+			break;
+		}
+		case 5:	//delete a break point from clock list
+		{
+			dlt_clk_BP();
+			break;
+		}
+		case 6:	//display all break point list
+		{
+			display_BP("All Program Counter break point(s):", PC_BP_list);	//Display pc break point list
+			display_BP("All clock break point(s):", clk_BP_list);	//Display clock break point list
+			break;
+		}
+		case 7:	//display data from a specific memory
+		{
+			std::string address;
+			std::cout << "Type in the address of the memory to display: ";
+			std::cin >> address;
+			printf("Data in that memory is %02lx\n", memory[static_cast<unsigned char>(strtol(address.c_str(), NULL, BASE_OF_HEX))]);	//display hex decimal of the specific memory value
+			break;
+		}
+		case 8:	//display data from a specific register
+		{
+			int address;
+			std::cout << "Type in the address of the memory to display: ";
+			std::cin >> address;
+			printf("Data in that register is %02lx\n", m_CPU.get_register_val(address));	//display hex decimal of the specific register value
+			break;
+		}
+		case 9:	//Update a data from a memory
+		{
+			std::string address, data;
+			std::cout << "Type in the hex value of address of the memory to update: ";
+			std::cin >> address;
+			std::cout << "Type in the two digits hex value of data to update: ";
+			std::cin >> data;
+			memory[static_cast<unsigned char>(strtol(address.c_str(), NULL, BASE_OF_HEX))] = static_cast<unsigned char>(strtol(data.c_str(), NULL, BASE_OF_HEX));	//update hex decimal of the specific memory value
+			break;
+		}
+		case 10:	//Update a data from a register
+		{
+			int address;
+			std::string data;
+			std::cout << "Type in the address (0-8) of the register to update: ";
+			std::cin >> address;
+			std::cout << "Type in the four digits hex value of data to update: ";
+			std::cin >> data;
+			m_CPU.set_register_val(address, static_cast<unsigned short>(strtol(data.c_str(), NULL, BASE_OF_HEX)));	//update hex decimal of the specific register value
+			break;
+		}
+		default:	//other wise
+			break;
+		}
 	}
 	
 	/*for (size_t i = 200; i < 500; i++)
@@ -109,11 +206,47 @@ void Debugger::run_debugger()
 	}*/
 }
 
-//Function to display help list
-int help_func()
+//add a new break point triggered by program counter	??create new function for these functions?
+void Debugger::add_PC_BP()
 {
-	int user_cmd;	//user's command
-	std::cout << "Command list:\n1. Load S-Record file\n\nChoose a command, type the number of command:	";
-	std::cin >> user_cmd;
-	return user_cmd;
+	std::cout << "Type in the Program Counter hex value of the new break point: ";
+	std::string PC_value;
+	std::cin >> PC_value;
+	PC_BP_list.push_back(strtol(PC_value.c_str(), NULL, BASE_OF_HEX));	//convert hex decimal string and push to PC break point list
+}
+
+//add a new break point triggered by CPU clock
+void Debugger::add_clk_BP()
+{
+	std::cout << "Type in the CPU clock value of the new break point: ";
+	int clk_value;
+	std::cin >> clk_value;
+	clk_BP_list.push_back(clk_value);	//add to clock break point list
+}
+
+//delete a break point triggered by program counter
+void Debugger::dlt_PC_BP()
+{
+	std::cout << "Type in the Program Counter hex value of break point to delete: ";
+	std::string PC_value;
+	std::cin >> PC_value;
+	PC_BP_list.remove(strtol(PC_value.c_str(), NULL, BASE_OF_HEX));	//convert hex decimal string and remove from PC break point list
+}
+
+//delete a break point triggered by CPU clock
+void Debugger::dlt_clk_BP()
+{
+	std::cout << "Type in the CPU clock value of break point to delete: ";
+	int clk_value;
+	std::cin >> clk_value;
+	clk_BP_list.remove(clk_value);	//delete from clock break point list
+}
+
+//display all break point from a list
+void Debugger::display_BP(std::string cmt, std::list<int>& l)
+{
+	std::cout << std::endl << cmt << std::endl;
+	l.sort();
+	for (std::list<int>::iterator it = l.begin(); it != l.end(); it++)	//display each element in the list
+		std::cout << *it << "\n";
 }
