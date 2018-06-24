@@ -9,11 +9,10 @@ public:
 
 	void run_debugger();
 
-	bool load_SRecord();
+	bool load_SRecord(unsigned char* memory);
 
 private:
-	unsigned char* memory;	//is it ok that memory is an element of debugger??
-
+	//unsigned char* memory;	//is it ok that memory is an element of debugger??
 
 };
 
