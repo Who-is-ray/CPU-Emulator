@@ -75,11 +75,11 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 
 			if (type == "S1" && record_size >= MIM_SIZE_OF_SRECORD)	// If it is S1 Record and record condition is correct
 			{
-				int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer	magic number??
-				short address = static_cast<short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
-				char sum = count
-					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
-					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX));	//create sum = count + address.ll +address.hh
+				unsigned char count = static_cast<unsigned char>(strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX));	//get count from record and convert to integer	magic number??
+				unsigned short address = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
+				unsigned char sum = count
+					+ static_cast<unsigned char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
+					+ static_cast<unsigned char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX));	//create sum = count + address.ll +address.hh
 				for (size_t i = 8; i < line.size() - 2; i += 2)	//start load data to memory
 				{
 					unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data to char
@@ -87,8 +87,8 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 					memory[address] = data;	//load data to memory
 					address++;	//update destination address
 				}
-				sum += (char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
-				if ((int)sum != -1)	//check sum = ff
+				sum += (unsigned char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
+				if ((int)sum != 255)	//check sum = ff
 				{	//if check sum not correct
 					rtv = false;	//return false
 					std::cout << line << " --check sum not correct\n";
@@ -97,14 +97,14 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 			}
 			else if (type == "S9" && record_size == 10)	// If it is S9 Record and record condition is correct
 			{
-				int count = strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX);	//get count from record and convert to integer
+				unsigned char count = static_cast<unsigned char>(strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX));	//get count from record and convert to integer
 				unsigned short PC = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
-				char sum = count
-					+ static_cast<char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
-					+ static_cast<char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX))
-					+ (char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//create sum = count + PC.ll +PC.hh
+				unsigned char sum = count
+					+ static_cast<unsigned char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
+					+ static_cast<unsigned char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX))
+					+ (unsigned char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//create sum = count + PC.ll +PC.hh
 				m_CPU.set_register_val(ADDRESS_OF_PROGRAM_COUNTER, PC);	//set Program Counter value
-				if ((int)sum != -1)	//check sum = ff
+				if ((int)sum != 255)	//check sum = ff
 				{	//if check sum not correct
 					rtv = false;	//return false
 					std::cout << line << " --check sum not correct\n";
@@ -180,9 +180,9 @@ void Debugger::run_debugger()
 		case 7:	//display data from a specific memory
 		{
 			std::string address;
-			std::cout << "Type in the address of the memory to display: ";
+			std::cout << "Type in the hex value of address of the memory to display: ";
 			std::cin >> address;
-			printf("Data in that memory is %02lx\n", memory[static_cast<unsigned char>(strtol(address.c_str(), NULL, BASE_OF_HEX))]);	//display hex decimal of the specific memory value
+			printf("Data in that memory is %02lx\n", memory[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))]);	//display hex decimal of the specific memory value
 			break;
 		}
 		case 8:	//display data from a specific register
@@ -200,7 +200,7 @@ void Debugger::run_debugger()
 			std::cin >> address;
 			std::cout << "Type in the two digits hex value of data to update: ";
 			std::cin >> data;
-			memory[static_cast<unsigned char>(strtol(address.c_str(), NULL, BASE_OF_HEX))] = static_cast<unsigned char>(strtol(data.c_str(), NULL, BASE_OF_HEX));	//update hex decimal of the specific memory value
+			memory[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))] = static_cast<unsigned char>(strtol(data.c_str(), NULL, BASE_OF_HEX));	//update hex decimal of the specific memory value
 			break;
 		}
 		case 10:	//Update a data from a register
