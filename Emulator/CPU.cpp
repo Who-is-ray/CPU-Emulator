@@ -397,7 +397,7 @@ void CPU::execute()
 	case 20:	//Opcode = 10100 (MOVH)
 	{
 		unsigned short data = get_data() >> BYTE_SIZE;	//get data from insturction and shift to high byte
-		Register_file[get_DST()] &= 0x00ff;	//clear high byte of register
+		Register_file[get_DST()] &= LOWER_BYTE;	//clear high byte of register
 		Register_file[get_DST()] += data;	//load data to high byte of destination register
 		break;
 	}
