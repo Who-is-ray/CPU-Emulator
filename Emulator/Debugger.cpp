@@ -5,7 +5,7 @@
 #include "CPU.h"	//header that define CPU class
 #include <signal.h>	//Signal handling software
 
-#define SIZE_OF_MEMORY	65536	//size of memory
+#define SIZE_OF_BYTE_MEMORY	1<<16	//size of byte memory
 #define BASE_OF_HEX	16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD	10	//minimun size of S-Record
 #define START_BIT_OF_COUNT	2	//start bit of count of S-Record
@@ -128,7 +128,7 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
-	unsigned char memory[SIZE_OF_MEMORY] = {NULL};	//initialize memory
+	unsigned char memory[SIZE_OF_BYTE_MEMORY] = {NULL};	//initialize memory
 	CPU m_CPU(memory);
 	int user_cmd=0;	//user's command
 	is_running = true;

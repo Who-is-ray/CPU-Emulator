@@ -66,10 +66,17 @@ void CPU::set_register_val(int address, unsigned short val)
 //CPU fetch function, emulate fetch routine
 void CPU::fetch()
 {
-	MAR = PROGRAM_COUNTER;	//load program counter to MAR
-	bus(READ);	//read through bus, load insturction to MDR
-	IR = MDR;	//load instruction from MDR to IR
-	PROGRAM_COUNTER += 2;	//update program counter
+	if (PROGRAM_COUNTER==0xffff)	//if program counter is invaild, return from interrupt
+	{
+
+	}
+	else	//if program counter is vaild
+	{
+		MAR = PROGRAM_COUNTER;	//load program counter to MAR
+		bus(READ);	//read through bus, load insturction to MDR
+		IR = MDR;	//load instruction from MDR to IR
+		PROGRAM_COUNTER += 2;	//update program counter
+	}
 }
 
 //CPU decode function, emulate decode routine
