@@ -19,7 +19,7 @@ public:
 	void execute();	//CPU execute function, emulate execute routine
 
 private:
-	unsigned short Register_file[SIZE_OF_REGISTER] = {10};	//register file
+	unsigned short Register_file[SIZE_OF_REGISTER] = {NULL};	//register file
 	unsigned char* m_memory;	//memory pointer
 	unsigned short MAR;	//memory address register
 	unsigned short MDR;	//memory data register

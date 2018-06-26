@@ -13,6 +13,7 @@
 #define PSW	Register_file[6]
 #define STACK_POINTER	Register_file[5]
 #define LINK_REGISTER	Register_file[4]
+#define	INVAILD_PC	0xffff
 #define	PSW_CARRY	0b1
 #define	PSW_ZERO	0b10
 #define	PSW_NEGATIVE	0b100
@@ -66,7 +67,7 @@ void CPU::set_register_val(int address, unsigned short val)
 //CPU fetch function, emulate fetch routine
 void CPU::fetch()
 {
-	if (PROGRAM_COUNTER==0xffff)	//if program counter is invaild, return from interrupt
+	if (PROGRAM_COUNTER == INVAILD_PC)	//if program counter is invaild, return from interrupt
 	{
 
 	}
@@ -505,7 +506,7 @@ void CPU::execute()
 
 //bus function	!!write untested
 void CPU::bus(bool read_write, bool byte_word)
-{	//??if address < 16 ?
+{	//!!if address < 16
 	unsigned char high_byte, low_byte;
 	if (byte_word)	//if processing word size data
 	{
