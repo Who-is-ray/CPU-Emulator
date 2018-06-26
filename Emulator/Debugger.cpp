@@ -2,7 +2,7 @@
 #include <iostream>	//library for cin
 #include <fstream>	//Input/output stream class to operate on files
 #include <string>	//library for string
-#include "CPU.h"	//header file of CPU class
+#include "CPU.h"	//header that define CPU class
 #include <signal.h>	//Signal handling software
 
 #define SIZE_OF_MEMORY	65536	//size of memory
@@ -188,7 +188,7 @@ void Debugger::run_debugger()
 		case 8:	//display data from a specific register
 		{
 			int address;
-			std::cout << "Type in the address of the register to display: ";
+			std::cout << "Type in the address (0-7) of the register to display: ";
 			std::cin >> address;
 			printf("Data in that register is %02lx\n", m_CPU.get_register_val(address));	//display hex decimal of the specific register value
 			break;
@@ -207,7 +207,7 @@ void Debugger::run_debugger()
 		{
 			int address;
 			std::string data;
-			std::cout << "Type in the address (0-8) of the register to update: ";
+			std::cout << "Type in the address (0-7) of the register to update: ";
 			std::cin >> address;
 			std::cout << "Type in the four digits hex value of data to update: ";
 			std::cin >> data;
@@ -216,7 +216,7 @@ void Debugger::run_debugger()
 		}
 		case 11:	//run CPU
 		{
-			while (1)	//fetch-decode-execute cycle
+			while (is_running)	//fetch-decode-execute cycle
 			{
 				m_CPU.fetch();
 				m_CPU.decode();

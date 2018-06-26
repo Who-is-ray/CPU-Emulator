@@ -24,12 +24,15 @@ int main()
 {
 	char number;
 	unsigned char a = 255;
-	unsigned char b = 2;
+	short b = 1;
 	int c = 4;
 	unsigned short d = a;
-	a = d >> 8;
+	bool e = b;
 	short f = d << 1;
-	std::cout << d <<std::endl;
+	short x = 0xff00;
+	unsigned short	y = 0xf0f0;
+	y+=x;
+	std::cout << x*b <<std::endl;
 
 	system("pause");
 	return 0;

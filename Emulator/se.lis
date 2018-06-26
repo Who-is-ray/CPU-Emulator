@@ -1,0 +1,206 @@
+X-Makina Assembler - Version 1.17 (8 June 2018)
+.ASM file: SwitchExample.asm
+
+  1	    	     	;
+  2	    	     	; Example of switch() statement implementation
+  3	    	     	;
+  4	    	     	; The following switch() statement example uses a table of case-labels
+  5	    	     	; to decide where to pass control (i.e., which label).
+  6	    	     	;
+  7	    	     	; The subroutine CaseOffset() is called with a pointer to a CaseTable 
+  8	    	     	; structure, with fields and offsets as follows:
+  9	    	     	; Contents:				Type:	Offset:
+ 10	    	     	; LowerBound of CaseTable		WORD	+0
+ 11	    	     	; UpperBound of CaseTable		WORD	+2
+ 12	    	     	; Default Address			WORD	+4
+ 13	    	     	; First Case address in CaseTable array	WORD	+6
+ 14	    	     	; ...
+ 15	    	     	; Last Case address in CaseTable array	WORD
+ 16	    	     	;
+ 17	    	     	; The sample switch statement:
+ 18	    	     	; switch(x)
+ 19	    	     	; {
+ 20	    	     	; case 10: /* ... */
+ 21	    	     	; break;
+ 22	    	     	; case 11:
+ 23	    	     	; case 15: /* ... */
+ 24	    	     	; break;
+ 25	    	     	; case 12: /* ... */
+ 26	    	     	; break;
+ 27	    	     	; default:
+ 28	    	     	; }
+ 29	    	     	;
+ 30	    	     	; L. Hughes
+ 31	    	     	; 30 May 2018
+ 32	    	     	;
+ 33	    	     	; Useful equates:
+ 34	    	     	PC	equ	R7	; PC is alias for R7
+ 35	    	     	SP	equ	R5	; SP is alias for R6
+ 36	    	     	LR	equ	R4	; LR is alias for R4
+ 37	    	     	TOS	equ	#$FFC0	; Highest location for stack
+ 38	    	     	;
+ 39	    	     		org	#$0
+ 40	    	     	;
+ 41	    	     	; Start of program
+ 42	    	     	;
+ 43	    	     	Mainline
+ 44	    	     	;
+ 45	    	     	; Initialize SP
+ 46	    	     	;
+ 47	0000	9605		movl	TOS,SP
+ 48	0002	A7FD		movh	TOS,SP
+ 49	    	     	;
+ 50	    	     	; Sample switch(x)
+ 51	    	     	; R0 contains 'x', the switch expression
+ 52	    	     	;
+ 53	0004	9001		movl	CaseTable,R1	; R1 points to CaseTable
+ 54	0006	A081		movh	CaseTable,R1
+ 55	0008	0FFB		bl	CaseOffset	; call CaseOffset()
+ 56	    	     	;
+ 57	    	     	; R1 is returned from CaseOffset(), it contains the address of the case
+ 58	    	     	; label
+ 59	    	     	;
+ 60	000A	760F		mov	R1,PC		; PC = R1 -- Control passed to address in R1
+ 61	    	     	;
+ 62	    	     		org	#$100
+ 63	    	     	Case10
+ 64	    	     		; Case 10 instructions
+ 65	0100	3DFF		bal	CaseExit	; break
+ 66	    	     	;
+ 67	    	     		org	#$200
+ 68	    	     	Case11
+ 69	    	     	Case15
+ 70	    	     		; Case 11 and 15 instructions
+ 71	0200	3D7F		bal	CaseExit	; break
+ 72	    	     	;
+ 73	    	     		org	#$300
+ 74	    	     	Case12
+ 75	    	     		; Case 12 instructions
+ 76	0300	3CFF		bal	CaseExit
+ 77	    	     	;
+ 78	    	     		org	#$400
+ 79	    	     	Default
+ 80	    	     		; Default instructions
+ 81	    	     		org	#$500
+ 82	    	     	CaseExit
+ 83	    	     	;
+ 84	    	     	;	Rest of mainline...
+ 85	    	     	;
+ 86	    	     	; ***********************************************************************
+ 87	    	     	;
+ 88	    	     		org	#$1000
+ 89	    	     	;
+ 90	    	     	; Case label table holding limits and addresses - different switch() statements would 
+ 91	    	     	; have different expressions, lower and upper bounds, and Case label addresses
+ 92	    	     	; Case label addresses are the address of each case label (see above and .LIS file)
+ 93	    	     	;
+ 94	    	     	CaseTable
+ 95	1000	000A		word	#10	; Lower bound		(+0)
+ 96	1002	0010		word	#16	; Upper bound+1		(+2)
+ 97	1004	0400		word	Default	; Default address	(+4)
+ 98	    	     	; List of case label addresses
+ 99	1006	0100		word	Case10	; 10			(+6)
+100	1008	0200		word	Case11	; 11
+101	100A	0300		word	Case12	; 12
+102	100C	0400		word	Default	; 13
+103	100E	0400		word	Default	; 14
+104	1010	0200		word	Case15	; 15
+105	1012	0400		word 	Default	; Catch-all
+106	    	     	;
+107	    	     	; ***********************************************************************
+108	    	     	;
+109	    	     		org	#$2000
+110	    	     	;
+111	    	     	; Equated values for access to case table - note these are all offsets into CaseTable
+112	    	     	;
+113	    	     	LB	equ	#0	; Offset for lower-bound
+114	    	     	UB	equ	#2	; Offset for upper-bound
+115	    	     	DEF	equ	#4	; Offset for upper-bound
+116	    	     	LIST	equ	#6	; First label in list
+117	    	     	;
+118	    	     	; Entry point to Case offset calculator 
+119	    	     	CaseOffset
+120	    	     	;
+121	    	     	; R0 is expression - treat as volatile (i.e., save)
+122	    	     	; R1 is address of case table structure
+123	    	     	; R2 is scratch register (undefined after call)
+124	    	     	; Return R1 as address of case label
+125	    	     	;
+126	    	     	; 1. Compare with lower and upper limits
+127	    	     	; Check lower bound
+128	    	     	;
+129	2000	C00A		ldr	R1,LB,R2	; R2 = mem[R1+LB] (lower bound)
+130	2002	6A02		cmp	R0,R2		; tmp = R0 - R2
+131	2004	3803		blt	CaseOffOOR	; R0 < LowerBound - out of range
+132	2006	C10A		ldr	R1,UB,R2	; R2 = mem[R1+UB] (upper bound)
+133	2008	6A02		cmp	R0,R2		; tmp = R0 - R2
+134	200A	3802		blt	CaseOffIR	; R0 < UpperBound - in range
+135	    	     	;
+136	    	     	; 2. Case offset is out of range - use default
+137	    	     	;
+138	    	     	CaseOffOOR
+139	200C	C209		ldr	R1,DEF,R1	; R1 = mem[R1+DEF]
+140	200E	7627		mov	LR,PC		; return R1 as Default case address
+141	    	     	;
+142	    	     	; 3. Case offset is in range - R0 >= LB and R0 < UB (10..15)
+143	    	     	;
+144	    	     	CaseOffIR
+145	    	     	;
+146	    	     	; 3.1 Save R0 (volatile)
+147	2010	8E05		ST	R0,-SP		; Push R0
+148	    	     	;
+149	    	     	; 3.2 Normalize R0 (0..5)
+150	2012	C00A		ldr	R1,LB,R2	; R2 = [R1+LB] (lower bound)
+151	2014	6410		sub	R2,R0		; R0 = R0 - lower bound (Range: 0 to upper bound)
+152	    	     	; 
+153	    	     	; 3.3 Multiply R0 by 2 (shift left by 1) to get word offset (0, 2, 4, ... 10)
+154	2016	6000		add.w	R0,R0
+155	    	     	; 
+156	    	     	; 3.4 Get address: [R1 + LIST + R0] is address of case-label
+157	2018	9832		movlz	LIST,R2		; R2 = LIST (+6)
+158	201A	6010		add.w	R2,R0		; R0 = word offset + 6
+159	201C	6001		add.w	R0,R1		; R1 = CaseTable addr + word offset + 6
+160	    	     	; 
+161	    	     	; 3.5 Extract case-label address from table
+162	201E	8009		ld	R1,R1		; R1 = [R1]
+163	    	     	;
+164	    	     	; 3.6 Restore R0 and return
+165	2020	8105		LD	SP+,R0		; Pull (restore) R0
+166	2022	7627		mov	LR,PC		; return R1 as Case-Label address
+167	    	     	;
+168	    	     		end	Mainline	; Starting address
+
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+CaseOffIR                          	LBL	2010	8208
+CaseOffOOR                         	LBL	200C	8204
+LIST                               	LBL	0006	6
+DEF                                	LBL	0004	4
+UB                                 	LBL	0002	2
+LB                                 	LBL	0000	0
+Default                            	LBL	0400	1024
+Case12                             	LBL	0300	768
+Case15                             	LBL	0200	512
+Case11                             	LBL	0200	512
+CaseExit                           	LBL	0500	1280
+Case10                             	LBL	0100	256
+CaseOffset                         	LBL	2000	8192
+CaseTable                          	LBL	1000	4096
+Mainline                           	LBL	0000	0
+TOS                                	LBL	FFC0	-64
+LR                                 	REG	0004	4
+SP                                 	REG	0005	5
+PC                                 	REG	0007	7
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\pre_assembler\pre_assembler\Debug\SwitchExample.xme
+

@@ -1,0 +1,70 @@
+X-Makina Assembler - Version 1.17 (8 June 2018)
+.ASM file: PolledDevices.asm
+
+  1	    	     	;
+  2	    	     	; Example of device polling using X-Makina
+  3	    	     	; L. Hughes
+  4	    	     	; 14 June 2018
+  5	    	     	;
+  6	    	     	DBA	equ	#$4	; DBA bit in status registers
+  7	    	     	;
+  8	    	     	; Device memory
+  9	    	     		org	#$0
+ 10	0000	0002	DEV0	byte	#$2	; Device 0 control/status register - Input
+ 11	0001	0000		byte	#0	; Device 0 data register - reserve (input)
+ 12	    	     	;
+ 13	0002	0000	DEV1	byte	#0	; Device 1 control/status register - Output
+ 14	0003	0000		byte	#0	; Device 1 data register - reserve (output)
+ 15	    	     	;
+ 16	    	     	;
+ 17	    	     	; Code memory
+ 18	    	     		org	#$100
+ 19	    	     	Mainline
+ 20	    	     	;
+ 21	    	     	; R0 has address of Device 0
+ 22	    	     	;
+ 23	0100	9800		movlz	DEV0,R0	; R0 = address of DEV0
+ 24	    	     	;
+ 25	    	     	; Input polling loop
+ 26	    	     	InLoop
+ 27	0102	8048		ld.b	R0,R1	; R1.byte = mem[DEV0] ; control/status register
+ 28	0104	6ED9		and.b	DBA,R1	; R1 = R1 & DBA
+ 29	0106	23FD		beq	InLoop	; If result is zero (nothing received), continue polling
+ 30	    	     	;
+ 31	    	     	; Device 0 has data - read it
+ 32	0108	C0C1		ldr.b	R0,#1,R1	; R1.byte = mem[DEV0 + 1]
+ 33	    	     	;
+ 34	    	     	; Check if Device 1 can be written to
+ 35	    	     	OutLoop
+ 36	010A	C142		ldr.b	R0,#2,R2	; R2.byte = mem[DEV0 + 2] ; control/status register
+ 37	010C	6EDA		and.b	DBA,R2	; R2 = R2 & DBA
+ 38	010E	23FD		beq	OutLoop	; if result is zero (still xmitting), continue polling
+ 39	    	     	;
+ 40	    	     	; Device 1 ready for output
+ 41	0110	E1C8		str.b	R1,R0,#3	; mem[DEV0 + 3] = R1 (data read)
+ 42	    	     	;
+ 43	    	     	; Repeat for next character
+ 44	0112	3FF7		bal	InLoop
+ 45	    	     	;
+ 46	    	     		end	Mainline
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+OutLoop                            	LBL	010A	266
+InLoop                             	LBL	0102	258
+Mainline                           	LBL	0100	256
+DEV1                               	LBL	0002	2
+DEV0                               	LBL	0000	0
+DBA                                	LBL	0004	4
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\pre_assembler\pre_assembler\Debug\PolledDevices.xme
+

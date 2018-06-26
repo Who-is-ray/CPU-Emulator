@@ -1,0 +1,148 @@
+X-Makina Assembler - Version 1.17 (8 June 2018)
+.ASM file: Strings.asm
+
+  1	    	     	;
+  2	    	     	; Example X-Makina program
+  3	    	     	; Assembling two string functions (strlen() and strcpy())
+  4	    	     	; Called by mainline
+  5	    	     	; L. Hughes
+  6	    	     	; 11 Jun 2018 - Second example of storing length using relative addressing
+  7	    	     	; 11 May 2018
+  8	    	     	;
+  9	    	     	STKTOP	equ	#$FFBE	; Top-of-stack - word below device vectors
+ 10	    	     	NUL	equ	#'\0'	; End-of-string indicator
+ 11	    	     	; 
+ 12	    	     	r2	equ	R2	; r2 is alias of R2
+ 13	    	     	LR	equ	R4	; LR is alias of R4
+ 14	    	     	SP	equ	R5	; SP is alias of R5 
+ 15	    	     	PC	equ	R7	; PC is alias of R7
+ 16	    	     	;
+ 17	    	     	; Code space
+ 18	    	     		org	#$100
+ 19	    	     	Main
+ 20	    	     	; Initialize stack point
+ 21	0100	95F5		movl	STKTOP,SP	; LSB to SP
+ 22	0102	A7FD		movh	STKTOP,SP	; MSB to SP
+ 23	    	     	;
+ 24	    	     	; R1 points to string
+ 25	0104	9011		movl	MyStr,R1
+ 26	0106	A081		movh	MyStr,R1
+ 27	    	     	; Call strlen()
+ 28	0108	0007		bl	strlen	; R1 points to string; R0 returned with length
+ 29	    	     	;
+ 30	    	     	; Two examples of storing (R0, length, in MSLen):
+ 31	    	     	;
+ 32	    	     	; 1. Indexed using R1 (address of MyStr)
+ 33	010A	6491		sub	#2,R1	; Word before MyStr is MSLen
+ 34	010C	8901		st.w	R0,R1+	; Save R0 in MSLen
+ 35	    	     				; Bit of a cheat - increment R1 by 2 to point 
+ 36	    	     				; back to string MyStr
+ 37	    	     	;
+ 38	    	     	; 2. Relative using offset "back" from R1 to MSLen's location
+ 39	010E	FF01		str.w	R0,R1,#-2; mem[R1-2] = R0
+ 40	    	     				; Note that R1 is unchanged
+ 41	    	     	;
+ 42	    	     	; Call strcpy()
+ 43	    	     	; MyStr (R1) to Str2 (r2)
+ 44	    	     	; Setup destination str in R2
+ 45	0110	9052		movl	Str2,r2
+ 46	0112	A082		movh	Str2,r2
+ 47	    	     	;
+ 48	0114	000C		bl	strcpy	; LR holds return address
+ 49	    	     	;
+ 50	0116	3FFF	Done	bal	Done	; No halt or monitor to return to, loop forever
+ 51	    	     	;
+ 52	    	     	; String length function
+ 53	    	     	; Input: R1 - Address of NUL-terminated string
+ 54	    	     	; Returns: Length of string in R0
+ 55	    	     	strlen
+ 56	    	     	; 
+ 57	0118	8E0D		st	R1,-SP	; Push R1 (to restore on exit)
+ 58	011A	8E15		st	R2,-SP	; Push R2 (holds character read)
+ 59	011C	9800		movlz	#0,R0	; Return length in R0 (initially zero)
+ 60	    	     	;
+ 61	    	     	strlen1	
+ 62	011E	8151		ld.b	R1+,R2	; Copy byte [R1] to R2 and R1 incremented by 1
+ 63	0120	6AC2		cmp.b	NUL,R2	; Compare byte (in R2) with NUL
+ 64	0122	2002		beq	strlen2	; If equal, go to strlen2
+ 65	0124	6088		add	#1,R0	; R0 (length) incremented by 1
+ 66	0126	3FFB		bal	strlen1	; Check next byte
+ 67	    	     	;
+ 68	    	     	; Finished
+ 69	    	     	strlen2	
+ 70	0128	8115		ld	SP+,R2	; Pull R2
+ 71	012A	810D		ld	SP+,R1	; Pull R1
+ 72	012C	7627		mov	LR,PC	; Return to caller.  R0 has length
+ 73	    	     	;
+ 74	    	     	; String copy function
+ 75	    	     	; Input: R1 - src string; R2 - dst string
+ 76	    	     	; R0 holds char - stop when NUL
+ 77	    	     	; No check on length of dst string
+ 78	    	     	; Returns: nothing
+ 79	    	     	strcpy
+ 80	012E	8E05		st	R0,-SP	; Push R0
+ 81	0130	8E0D		st	R1,-SP	; Push R1
+ 82	0132	8E15		st	R2,-SP	; Push R2
+ 83	    	     	;
+ 84	    	     	strcpy1
+ 85	0134	8101		ld	R1+,R0	; ch = src[i++]
+ 86	0136	8902		st	R0,R2+	; dst[j++] = ch (includes NUL)
+ 87	0138	6AC0		cmp.b	NUL,R0	; ch = NUL?
+ 88	013A	27FC		bne	strcpy1	; No - do next ch
+ 89	    	     	;
+ 90	    	     	; NUL found - restore registers and return
+ 91	013C	8115		ld	SP+,R2	; Pull R2
+ 92	013E	810D		ld	SP+,R1	; Pull R1
+ 93	0140	8105		ld	SP+,R0	; Pull R0
+ 94	0142	7627		mov	LR,PC	; return to caller
+ 95	    	     	;
+ 96	    	     	; Data space 
+ 97	    	     	; Setting the origin could be unsafe - if code addresses extend past $1000, they
+ 98	    	     	; could be overwritten by the data.  This is one argument for a linker.
+ 99	    	     	;
+100	    	     		org	#$1000
+101	    	     	;
+102	1000	0000	MSLen	bss	#2	; Reserve 2 bytes (word) for length of MyStr
+103	1002	0054	MyStr	byte	#'T'	; The assembler needs a string directive...
+104	1003	0068		byte	#'h'
+105	1004	0065		byte	#'e'
+106	1005	0020		byte	#' '
+107	1006	0063		byte	#'c'
+108	1007	0061		byte	#'a'
+109	1008	0074		byte	#'t'
+110	1009	0000		byte	NUL
+111	    	     	;
+112	100A	0000	Str2	bss	#100	; 100 bytes for destination string
+113	    	     	;
+114	    	     		end	Main
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+MSLen                              	LBL	1000	4096
+strcpy1                            	LBL	0134	308
+strlen2                            	LBL	0128	296
+strlen1                            	LBL	011E	286
+Done                               	LBL	0116	278
+strcpy                             	LBL	012E	302
+Str2                               	LBL	100A	4106
+strlen                             	LBL	0118	280
+MyStr                              	LBL	1002	4098
+Main                               	LBL	0100	256
+PC                                 	REG	0007	7
+SP                                 	REG	0005	5
+LR                                 	REG	0004	4
+r2                                 	REG	0002	2
+NUL                                	LBL	0000	0
+STKTOP                             	LBL	FFBE	-66
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\pre_assembler\pre_assembler\Debug\Strings.xme
+
