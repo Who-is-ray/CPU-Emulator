@@ -1,17 +1,19 @@
-#include "Debugger.h"
+#include "Debugger.h"	//header that define debugger class
 #include <iostream>	//library for cin
 #include <fstream>	//Input/output stream class to operate on files
 #include <string>	//library for string
 #include "CPU.h"	//header that define CPU class
 #include <signal.h>	//Signal handling software
+#include "Memory.h"	//header that define memory class
+#include <algorithm>	//library for algorithm operation (find)
 
-#define SIZE_OF_BYTE_MEMORY	1<<16	//size of byte memory
 #define BASE_OF_HEX	16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD	10	//minimun size of S-Record
 #define START_BIT_OF_COUNT	2	//start bit of count of S-Record
 #define ADDRESS_OF_PROGRAM_COUNTER	7	//address of program counter
 
-bool is_running;	//indicate whether debugger should keep running
+bool cpu_is_running;	//indicate whether cpu should keep running
+bool debugger_is_running;	//indicate whether debugger should keep running
 
 //Function to display help list
 int help_func()
@@ -29,6 +31,7 @@ int help_func()
 		<< "9. Update a data from a memory\n"
 		<< "10. Update a data from a register\n"
 		<< "11. Run CPU\n"
+		<< "12. Exit"
 		<<"\nChoose a command, type the number of command:	";
 	std::cin >> user_cmd;
 	return user_cmd;
@@ -41,7 +44,7 @@ int help_func()
 */
 void sigint_hdlr()
 {
-	is_running = false;
+	cpu_is_running = false;
 }
 
 //constructor
@@ -54,11 +57,21 @@ Debugger::~Debugger()
 {
 }
 
+//check debugger status in CPU cycle after fetch decode execute
+void Debugger::check_debugger_status(CPU& m_CPU)
+{
+	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
+	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
+	{
+		cpu_is_running = false;
+	}
+}
+
 /*
 	The function to load S-Record data to memory
 	Return loading result true if loading successfully, false if has problem
 */
-bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
+bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 {
 	std::string SRecord_fileName;
 	std::cout << "Input the file name of S-Record file: ";	//ask user for file name
@@ -84,7 +97,7 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 				{
 					unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data to char
 					sum += data;
-					memory[address] = data;	//load data to memory
+					memory.m_memory.byte_mem[address] = data;	//load data to memory
 					address++;	//update destination address
 				}
 				sum += (unsigned char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//update sum
@@ -128,12 +141,12 @@ bool Debugger::load_SRecord(unsigned char* memory, CPU& m_CPU)
 void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
-	unsigned char memory[SIZE_OF_BYTE_MEMORY] = {NULL};	//initialize memory
-	CPU m_CPU(memory);
+	Memory mem;	//initialize memory
+	CPU m_CPU(mem);
 	int user_cmd=0;	//user's command
-	is_running = true;
+	debugger_is_running = true;
 
-	while (is_running)
+	while (debugger_is_running)
 	{
 		// print help and ask user for command
 		user_cmd = help_func();
@@ -145,7 +158,7 @@ void Debugger::run_debugger()
 			bool is_load = false;
 			while (!is_load)	//??need comment?
 			{
-				is_load = load_SRecord(memory, m_CPU);	//Call loading function
+				is_load = load_SRecord(mem, m_CPU);	//Call loading function
 				if (!is_load)	//if loading failed
 					std::cout << "Loading failed! Try again!\n";
 			}
@@ -182,7 +195,7 @@ void Debugger::run_debugger()
 			std::string address;
 			std::cout << "Type in the hex value of address of the memory to display: ";
 			std::cin >> address;
-			printf("Data in that memory is %02lx\n", memory[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))]);	//display hex decimal of the specific memory value
+			printf("Data in that memory is %04lx\n", mem.m_memory.word_mem[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))/2]);	//display hex decimal of the specific memory value
 			break;
 		}
 		case 8:	//display data from a specific register
@@ -190,7 +203,7 @@ void Debugger::run_debugger()
 			int address;
 			std::cout << "Type in the address (0-7) of the register to display: ";
 			std::cin >> address;
-			printf("Data in that register is %02lx\n", m_CPU.get_register_val(address));	//display hex decimal of the specific register value
+			printf("Data in that register is %04lx\n", m_CPU.get_register_val(address));	//display hex decimal of the specific register value
 			break;
 		}
 		case 9:	//Update a data from a memory
@@ -200,7 +213,7 @@ void Debugger::run_debugger()
 			std::cin >> address;
 			std::cout << "Type in the two digits hex value of data to update: ";
 			std::cin >> data;
-			memory[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))] = static_cast<unsigned char>(strtol(data.c_str(), NULL, BASE_OF_HEX));	//update hex decimal of the specific memory value
+			mem.m_memory.byte_mem[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))] = static_cast<unsigned char>(strtol(data.c_str(), NULL, BASE_OF_HEX));	//update hex decimal of the specific memory value
 			break;
 		}
 		case 10:	//Update a data from a register
@@ -216,12 +229,19 @@ void Debugger::run_debugger()
 		}
 		case 11:	//run CPU
 		{
-			while (is_running)	//fetch-decode-execute cycle
+			cpu_is_running = true;
+			while (cpu_is_running)	//fetch-decode-execute cycle
 			{
 				m_CPU.fetch();
 				m_CPU.decode();
 				m_CPU.execute();
+				check_debugger_status(m_CPU);
 			}
+			break;
+		}
+		case 12:	//exit debugger
+		{
+			debugger_is_running = false;
 			break;
 		}
 		default:	//other wise
@@ -233,7 +253,7 @@ void Debugger::run_debugger()
 	/*for (size_t i = 200; i < 500; i++)
 	{
 		std::cout << i << "\t";
-		printf("%02lx\n", memory[i]);
+		printf("%02lx\n", mem.m_memory.byte_mem[i]);
 	}*/
 }
 

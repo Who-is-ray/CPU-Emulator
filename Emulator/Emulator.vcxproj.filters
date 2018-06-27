@@ -4,9 +4,11 @@
     <ClCompile Include="Debugger.cpp" />
     <ClCompile Include="mian.cpp" />
     <ClCompile Include="CPU.cpp" />
+    <ClCompile Include="Memory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Debugger.h" />
     <ClInclude Include="CPU.h" />
+    <ClInclude Include="Memory.h" />
   </ItemGroup>
 </Project>
