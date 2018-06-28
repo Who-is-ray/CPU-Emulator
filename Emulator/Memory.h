@@ -6,7 +6,7 @@
 enum SIZE { BYTE, WORD };	//enum of size, byte = 0, word = 1
 enum ACTION { READ, WRITE };	//enum of action, read = 0, write = 1
 
-union memory	//memory union
+union memory	//memory union	??put in cpp file?
 {
 	unsigned char byte_mem[SIZE_OF_BYTE_MEMORY];	//memory array of byte size elements
 	unsigned short word_mem[SIZE_OF_WORD_MEMORY];	//memory array of word size elements

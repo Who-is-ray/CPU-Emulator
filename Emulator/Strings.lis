@@ -1,4 +1,4 @@
-X-Makina Assembler - Version 1.17 (8 June 2018)
+X-Makina Assembler - Version 1.18 (27 June 2018)
 .ASM file: Strings.asm
 
   1	    	     	;
@@ -62,7 +62,7 @@ X-Makina Assembler - Version 1.17 (8 June 2018)
  59	011C	9800		movlz	#0,R0	; Return length in R0 (initially zero)
  60	    	     	;
  61	    	     	strlen1	
- 62	011E	8151		ld.b	R1+,R2	; Copy byte [R1] to R2 and R1 incremented by 1
+ 62	011E	814A		ld.b	R1+,R2	; Copy byte [R1] to R2 and R1 incremented by 1
  63	0120	6AC2		cmp.b	NUL,R2	; Compare byte (in R2) with NUL
  64	0122	2002		beq	strlen2	; If equal, go to strlen2
  65	0124	6088		add	#1,R0	; R0 (length) incremented by 1
@@ -70,8 +70,8 @@ X-Makina Assembler - Version 1.17 (8 June 2018)
  67	    	     	;
  68	    	     	; Finished
  69	    	     	strlen2	
- 70	0128	8115		ld	SP+,R2	; Pull R2
- 71	012A	810D		ld	SP+,R1	; Pull R1
+ 70	0128	812A		ld	SP+,R2	; Pull R2
+ 71	012A	8129		ld	SP+,R1	; Pull R1
  72	012C	7627		mov	LR,PC	; Return to caller.  R0 has length
  73	    	     	;
  74	    	     	; String copy function
@@ -85,15 +85,15 @@ X-Makina Assembler - Version 1.17 (8 June 2018)
  82	0132	8E15		st	R2,-SP	; Push R2
  83	    	     	;
  84	    	     	strcpy1
- 85	0134	8101		ld	R1+,R0	; ch = src[i++]
+ 85	0134	8108		ld	R1+,R0	; ch = src[i++]
  86	0136	8902		st	R0,R2+	; dst[j++] = ch (includes NUL)
  87	0138	6AC0		cmp.b	NUL,R0	; ch = NUL?
  88	013A	27FC		bne	strcpy1	; No - do next ch
  89	    	     	;
  90	    	     	; NUL found - restore registers and return
- 91	013C	8115		ld	SP+,R2	; Pull R2
- 92	013E	810D		ld	SP+,R1	; Pull R1
- 93	0140	8105		ld	SP+,R0	; Pull R0
+ 91	013C	812A		ld	SP+,R2	; Pull R2
+ 92	013E	8129		ld	SP+,R1	; Pull R1
+ 93	0140	8128		ld	SP+,R0	; Pull R0
  94	0142	7627		mov	LR,PC	; return to caller
  95	    	     	;
  96	    	     	; Data space 
@@ -144,5 +144,5 @@ R2                                 	REG	0002	2
 R1                                 	REG	0001	1
 R0                                 	REG	0000	0
 
-.XME file: H:\Repos\pre_assembler\pre_assembler\Debug\Strings.xme
+.XME file: H:\Google Drive\study\Dalhousie University\Computer Architecture\Strings.xme
 

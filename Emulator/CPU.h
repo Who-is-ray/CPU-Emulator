@@ -11,7 +11,7 @@ class CPU
 {
 public:
 	CPU(Memory& memory);	//constructor
-	~CPU();	//destructor
+	~CPU() {}	//destructor
 
 	unsigned short get_register_val(int loc);	//get a specific register value
 	void set_register_val(int address, unsigned short val);	//set a specific register value
@@ -30,9 +30,10 @@ private:
 	unsigned const short const_table[SIZE_OF_CONST_TABLE] = { 0,1,2,4,8,32,48,0xffff };	//constant table that store the constand value
 
 	void write_byte_to_dst(unsigned short& dst, unsigned char data);	//write a byte size data to destination lower byte
-	unsigned char get_DST();	//return DST info from instruction
-	unsigned char get_SRC();	//return SRC info from instruction
+	unsigned char DST_EA();	//return DST info from instruction
+	unsigned char SRC_EA();	//return SRC info from instruction
 	short get_relative_offset();	//return relative offset value from instruction (LDR STR)
 	unsigned char get_data();	//return data value from instruction	(MOVL, MOVLZ, MOVH)
 	short get_offset();	//return offset value from instruction	(BEQ/BZ to BAL)
+	void ModifyStatusFlags(unsigned int result, unsigned int data1, unsigned int data2, unsigned int carry_bit, unsigned int sign_bit);	//updat psw register
 };

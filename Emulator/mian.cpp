@@ -23,16 +23,16 @@ int main()	//starting point of the program
 int main()
 {
 	char number;
-	unsigned char a = 255;
-	short b = 1;
-	int c = 4;
-	unsigned short d = a;
+	unsigned char a = 0b00111100;
+	unsigned char b = 0b01100110;
+	unsigned char c = ~b;
+	unsigned char d = ~a;
 	bool e = b;
-	short f = d << 1;
+	unsigned short f = (a&b);
 	short x = 0xff00;
 	unsigned short	y = 0xf0f0;
 	y+=x;
-	std::cout << x*b <<std::endl;
+	std::cout << f <<std::endl;
 
 	system("pause");
 	return 0;

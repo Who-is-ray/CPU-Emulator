@@ -45,31 +45,37 @@ int help_func()
 void sigint_hdlr()
 {
 	cpu_is_running = false;
+	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//reset call signal() - bind sigint_hdlr to SIGINT 
 }
 
-//constructor
-Debugger::Debugger()	
-{
-}
-
-//destructor
-Debugger::~Debugger()	
-{
-}
-
-//check debugger status in CPU cycle after fetch decode execute
+/*
+	check debugger status in CPU cycle after fetch decode execute
+	m_CPU - CPU currently running
+*/
 void Debugger::check_debugger_status(CPU& m_CPU)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
 		cpu_is_running = false;
+		printf("Catched break point %4lx\n", PC);
+	}
+}
+
+//check interrput to emulate interrupt
+void Debugger::check_interrupt()
+{
+	for (unsigned short i = 0; i < 16; i+=2)
+	{
+
 	}
 }
 
 /*
 	The function to load S-Record data to memory
 	Return loading result true if loading successfully, false if has problem
+	memory - memory to load to
+	m_CPU - CPU to load to
 */
 bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 {
@@ -293,11 +299,15 @@ void Debugger::dlt_clk_BP()
 	clk_BP_list.remove(clk_value);	//delete from clock break point list
 }
 
-//display all break point from a list
+/*
+	display all break point from a list
+	cmt - comment to display
+	l - list to display
+*/
 void Debugger::display_BP(std::string cmt, std::list<int>& l)
 {
 	std::cout << std::endl << cmt << std::endl;
 	l.sort();
 	for (std::list<int>::iterator it = l.begin(); it != l.end(); it++)	//display each element in the list
-		std::cout << *it << "\n";
+		printf("Catched break point %4lx\n", *it);
 }
