@@ -60,15 +60,8 @@ void Debugger::check_debugger_status(CPU& m_CPU)
 		cpu_is_running = false;
 		printf("Catched break point %4lx\n", PC);
 	}
-}
 
-//check interrput to emulate interrupt
-void Debugger::check_interrupt()
-{
-	for (unsigned short i = 0; i < 16; i+=2)
-	{
-
-	}
+	//!!
 }
 
 /*
@@ -136,7 +129,8 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 				rtv = false;
 		}
 	}
-
+	if (!rtv)	//if loading failed
+		std::cout << "Loading failed! Try again!\n";
 	return rtv;
 }
 
@@ -162,11 +156,9 @@ void Debugger::run_debugger()
 		case 1:	//Load S-Record
 		{
 			bool is_load = false;
-			while (!is_load)	//??need comment?
+			while (!is_load)	//??need comment?  ??re think
 			{
 				is_load = load_SRecord(mem, m_CPU);	//Call loading function
-				if (!is_load)	//if loading failed
-					std::cout << "Loading failed! Try again!\n";
 			}
 			break;
 		}
@@ -175,9 +167,9 @@ void Debugger::run_debugger()
 			add_PC_BP();
 			break;
 		}
-		case 3:	//add new clock break point
+		case 3:	//set new clock limit
 		{
-			add_clk_BP();
+			set_clk_limit();
 			break;
 		}
 		case 4:	//delete a break point from PC list
@@ -185,15 +177,9 @@ void Debugger::run_debugger()
 			dlt_PC_BP();
 			break;
 		}
-		case 5:	//delete a break point from clock list
-		{
-			dlt_clk_BP();
-			break;
-		}
 		case 6:	//display all break point list
 		{
 			display_BP("All Program Counter break point(s):", PC_BP_list);	//Display pc break point list
-			display_BP("All clock break point(s):", clk_BP_list);	//Display clock break point list
 			break;
 		}
 		case 7:	//display data from a specific memory
@@ -273,12 +259,12 @@ void Debugger::add_PC_BP()
 }
 
 //add a new break point triggered by CPU clock
-void Debugger::add_clk_BP()
+void Debugger::set_clk_limit()
 {
 	std::cout << "Type in the CPU clock value of the new break point: ";
 	int clk_value;
 	std::cin >> clk_value;
-	clk_BP_list.push_back(clk_value);	//add to clock break point list
+	clock_limit = clk_value;	//update clock limit
 }
 
 //delete a break point triggered by program counter
@@ -288,15 +274,6 @@ void Debugger::dlt_PC_BP()
 	std::string PC_value;
 	std::cin >> PC_value;
 	PC_BP_list.remove(strtol(PC_value.c_str(), NULL, BASE_OF_HEX));	//convert hex decimal string and remove from PC break point list
-}
-
-//delete a break point triggered by CPU clock
-void Debugger::dlt_clk_BP()
-{
-	std::cout << "Type in the CPU clock value of break point to delete: ";
-	int clk_value;
-	std::cin >> clk_value;
-	clk_BP_list.remove(clk_value);	//delete from clock break point list
 }
 
 /*
@@ -309,5 +286,5 @@ void Debugger::display_BP(std::string cmt, std::list<int>& l)
 	std::cout << std::endl << cmt << std::endl;
 	l.sort();
 	for (std::list<int>::iterator it = l.begin(); it != l.end(); it++)	//display each element in the list
-		printf("Catched break point %4lx\n", *it);
+		printf("%4lx\n", *it);
 }

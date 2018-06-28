@@ -16,7 +16,7 @@ void Memory::bus(unsigned short MAR, unsigned short& MDR, enum ACTION rw, enum S
 	else
 	{
 		if (rw == READ)
-			MDR = (bw == WORD) ? m_memory.word_mem[MAR / 2] : m_memory.byte_mem[MAR];	//read word/byte data to MDR
+			MDR = (bw == WORD) ? m_memory.word_mem[MAR >> 1] : m_memory.byte_mem[MAR];	//read word/byte data to MDR
 		else	//write
 		{
 			if (bw == WORD)
