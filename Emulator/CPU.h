@@ -31,6 +31,8 @@ public:
 	void execute();	//CPU execute function, emulate execute routine
 	void check_interrupt();	//check interrput to emulate interrupt
 
+	std::map<unsigned char /*device number*/, unsigned char /*processing time*/>device_process_time;	//map stores each output device's processing time
+
 private:
 	unsigned short Register_file[SIZE_OF_REGISTER] = {NULL};	//register file
 	Memory& m_mem;	//memory pointer
@@ -45,7 +47,6 @@ private:
 	short get_offset();	//return offset value from instruction	(BEQ/BZ to BAL)
 	void ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit, unsigned int sign_bit);	//updat psw register
 
-	std::map<unsigned char /*device number*/, unsigned char /*processing time*/>device_process_time;	//map stores each output device's processing time
 	std::deque<std::map<unsigned char /*priority*/, unsigned char /*device number*/>> interrput_queue;	//queue of interrupt(s)
 	std::map<unsigned int /*time to output*/, std::deque<output_data_info>> output_list;	//list to store output data
 };

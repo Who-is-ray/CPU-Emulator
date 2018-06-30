@@ -5,7 +5,6 @@
 #include "CPU.h"	//header that define CPU class
 #include <signal.h>	//Signal handling software
 #include "Memory.h"	//header that define memory class
-#include <algorithm>	//library for algorithm operation (find)
 
 #define BASE_OF_HEX	16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD	10	//minimun size of S-Record
@@ -20,6 +19,7 @@ int help_func()
 {
 	int user_cmd;	//user's command
 	std::cout << "\nCommand list:\n"
+		<< " 0: Load device file\n"
 		<< " 1: Load S-Record file\n"
 		<< " 2: Add a Program Counter break point\n"
 		<< " 3: Set clock limit\n"
@@ -52,7 +52,7 @@ void sigint_hdlr()
 	check debugger status in CPU cycle after fetch decode execute
 	m_CPU - CPU currently running
 */
-void Debugger::check_debugger_status(CPU& m_CPU)
+void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
@@ -61,7 +61,29 @@ void Debugger::check_debugger_status(CPU& m_CPU)
 		printf("Catched break point %4lx\n", PC);
 	}
 
-	//!!
+	if (clock>=clock_limit)	//if reached clock limit
+	{
+		cpu_is_running = false;
+		printf("Exceed clock limit %d\n", clock_limit);
+	}
+}
+
+//check device table to emulate input output device
+void Debugger::check_device_table(Memory& mem, const unsigned int clock)
+{
+	std::map<unsigned int /*time*/, std::vector<device_timetable_info>>::iterator it;
+	for (it = device_timetable.begin(); it !=device_timetable.end(); ++it)	//start check data comes in at this time
+	{
+		if (it->first <= clock)	//if there is data need to load
+		{
+			for (size_t i = 0; i < it->second.size(); i++)	//check each data need to load at this time
+			{
+				mem.m_memory.byte_mem[it->second[i].device_num * 2 + 1] |= it->second[i].data;	//load data to device CSR.data
+				mem.update_CSR(WRITE, WORD, it->second[i].device_num * 2);	//update device CSR
+			}
+			device_timetable.erase(it->first);	//finished loading, remove request from timetable
+		}
+	}
 }
 
 /*
@@ -137,21 +159,41 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 /*
 	the function to load device file
 */
-bool Debugger::load_device_file(Memory& memory)
+bool Debugger::load_device_file(Memory& memory, CPU& m_CPU)
 {
 	std::string Device_fileName;
 	std::cout << "Input the file name of device file: ";	//ask user for file name
 	std::cin >> Device_fileName;	//get user's input
-	std::ifstream Device_file(Device_fileName);
-	bool rtv = Device_file.is_open();	//  Is filed opened successfully? Yes = true, No = false.
-	if (rtv)	// If open successfully, start loading S-Record
+	FILE* Device_file;
+	Device_file = fopen(Device_fileName.c_str(), "r");
+	bool rtv = false;
+	if (Device_file != nullptr)	// If open successfully, start loading S-Record
 	{
-		std::string line;
-		while (std::getline(Device_file, line))	//reading lines from input file
-		{
-
+		unsigned char in_out = 0, dev_num = 0;
+		unsigned int process_time = 0;
+		while (dev_num<8)	//reading the first 8 lines from input file for device initialization
+		{	
+			fscanf(Device_file, "%c\t%c\t%u", &dev_num, &in_out, &process_time);
+			if (in_out == 1)	//if is input device
+				memory.m_memory.byte_mem[dev_num * 2] = CSR_INPUT_INIT;	//set CSR.IO
+			else	//if is output device
+			{
+				memory.m_memory.byte_mem[dev_num * 2] &= CSR_OUTPUT_INIT;	//clear CSR.IO
+				m_CPU.device_process_time[dev_num] = process_time;	//add device's processing time to processing time table
+			}
+			dev_num++;	//load initialization info for next device
 		}
+
+		unsigned int time = 0;
+		unsigned char data = 0;
+		while (fscanf(Device_file, "%u	%c	%c", &time, &dev_num, &data) != EOF)	//loading data for device
+		{
+			device_timetable[time].emplace_back(dev_num, data);
+		}
+		rtv = true;
 	}
+	fclose(Device_file);
+	return rtv;
 }
 
 /*
@@ -161,7 +203,7 @@ bool Debugger::load_device_file(Memory& memory)
 void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
-	unsigned int clock = 0;	//Initialize clock
+	unsigned int clock = 0;	//Initialize clock, the reason I put clock here is because clock usually are located outside CPU, such us matherboard
 	Memory mem(clock);	//initialize memory
 	CPU m_CPU(mem, clock);
 	int user_cmd=0;	//user's command
@@ -174,10 +216,19 @@ void Debugger::run_debugger()
 
 		switch (user_cmd)
 		{
+		case 0:	//load device file
+		{
+			bool is_load = false;
+			while (!is_load)	//if haven't load
+			{
+				is_load = load_device_file(mem, m_CPU);	//Call loading function
+			}
+			break;
+		}
 		case 1:	//Load S-Record
 		{
 			bool is_load = false;
-			while (!is_load)	//??need comment?
+			while (!is_load)	//if haven't load
 			{
 				is_load = load_SRecord(mem, m_CPU);	//Call loading function
 			}
@@ -253,7 +304,9 @@ void Debugger::run_debugger()
 				m_CPU.fetch();
 				m_CPU.decode();
 				m_CPU.execute();
-				check_debugger_status(m_CPU);
+				check_device_table(mem, clock);
+				//m_CPU.check_interrupt();
+				check_debugger_status(m_CPU, clock);
 			}
 			break;
 		}

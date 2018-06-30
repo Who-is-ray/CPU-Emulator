@@ -6,6 +6,8 @@
 #define CSR_DBA	1<<2	//control/status register bit DBA
 #define CSR_IO	1<<1	//control/status register bit I/O
 #define CSR_IE	1		//control/status register bit IE
+#define CSR_INPUT_INIT 2
+#define CSR_OUTPUT_INIT 0
 
 enum SIZE { BYTE, WORD };	//enum of size, byte = 0, word = 1
 enum ACTION { READ, WRITE };	//enum of action, read = 0, write = 1

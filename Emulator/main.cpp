@@ -46,16 +46,16 @@ int main()
 	unsigned short	y = 0xf0f0;
 	y+=x;
 	unsigned char t = 100;
+	std::map<int, std::queue<output_data_info>>::reverse_iterator it;
 	std::map<int, std::queue<output_data_info>> t_map;
 	for (int i = 0; i < 10; i++)
 	{
 		output_data_info info1(t + 1, t + 11);
 		t_map[i].emplace(info1);
 	}
-	for (int i = 0; i < 10; i++)
+	for (it = t_map.rbegin(); it != t_map.rend(); ++it)
 	{
-		output_data_info info1(t + 21, t + 31);
-		t_map[i].emplace(info1);
+		std::cout << it->first << "\n";
 	}
 	std::cout << f <<std::endl;
 

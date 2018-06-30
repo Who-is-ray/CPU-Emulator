@@ -22,7 +22,7 @@
 #define	GET_SLP	(x)		(x&(1<<3))	//value of psw.sleep
 #define	GET_OVERFLOW(x)	(x&(1<<4))	//value of psw.overflow
 #define	GET_PRIORITY(x)	(unsigned char)(x&0b11100000)>>5	//value of psw.priority
-#define GET_DATA(x)		(unsigned char)x>>8	//get psw.data
+#define GET_DATA(x)		(unsigned char)(x>>8)	//get psw.data
 #define PRPO	(IR&(1<<10))	//PRPO bit of instruction bit 11
 #define DEC		(IR&(1<<9))		//DEC bit of instruction bit 10
 #define INC		(IR&(1<<8))		//INC bit of instruction bit 9
