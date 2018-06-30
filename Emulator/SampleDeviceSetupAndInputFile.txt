@@ -1,0 +1,26 @@
+*** Device | 1-IN 0-OUT | Processing Time *** Remove this line to test ***
+0	1	0
+1	1	0
+2	1	0
+3	1	0
+4	0	151
+5	0	112
+6	0	253
+7	0	87
+*** Time | Device | Data *** Remove this line to test ***
+100	1	A
+105	0	a
+125	1	B
+160	1	C
+200	1	D
+200	0	b
+200	2	1
+220	0	c
+250	2	2
+251	1	E
+251	0	d
+265	2	3
+270	2	4
+280	2	5
+280	1	F
+281	0	e

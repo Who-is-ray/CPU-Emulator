@@ -1,6 +1,7 @@
 #include "CPU.h"
 #include "Memory.h"
 #include <iostream>
+#include <fstream>
 #include <bitset>
 
 #define	BYTE_SIZE	8		//size of byte
@@ -15,12 +16,13 @@
 #define GROUP_TWO_OPCODE	IR >> 8		//opcode of group two, bit 15 to 8
 #define GROUP_THREE_OPCODE	IR >> 11	//opcode of group three, bit 15 to 11
 #define	INVAILD_PC		0xffff			//invaild program counter value return from interrupt
-#define	PSW_CARRY		(PSW&1)			//value of psw.carry
-#define	PSW_ZERO		(PSW&(1<<1))	//value of psw.zero
-#define	PSW_NEGATIVE	(PSW&(1<<2))	//value of psw.negative
-#define	PSW_SLP			(PSW&(1<<3))	//value of psw.sleep
-#define	PSW_OVERFLOW	(PSW&(1<<4))	//value of psw.overflow
-#define	PSW_PRIORITY	(unsigned char)(PSW&0b11100000)>>5	//value of psw.priority
+#define GET_CARRY(x)	(x&1)			//value of psw.carry
+#define	GET_ZERO(x)		(x&(1<<1))	//value of psw.zero
+#define	GET_NEGATIVE(x)	(x&(1<<2))	//value of psw.negative
+#define	GET_SLP	(x)		(x&(1<<3))	//value of psw.sleep
+#define	GET_OVERFLOW(x)	(x&(1<<4))	//value of psw.overflow
+#define	GET_PRIORITY(x)	(unsigned char)(x&0b11100000)>>5	//value of psw.priority
+#define GET_DATA(x)		(unsigned char)x>>8	//get psw.data
 #define PRPO	(IR&(1<<10))	//PRPO bit of instruction bit 11
 #define DEC		(IR&(1<<9))		//DEC bit of instruction bit 10
 #define INC		(IR&(1<<8))		//INC bit of instruction bit 9
@@ -43,31 +45,31 @@
 #define BIT_TWELVE		1<<11
 #define BIT_FOURTEEN	1<<13
 #define BIT_FIFTEEN		1<<14
+#define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X<<1)
 
 int opcode;	//opcode for decoding and executing
+std::ofstream fout;
 
 /*
 	constructor
 	linked memory reference to CPU memory reference
-	initialize CPU clock
 	memory - memory of emulator
 */
-CPU::CPU(Memory& memory) :m_mem(memory), CPU_clock(0)
-{}
-
-//get current priority
-unsigned char CPU::get_current_priority()
+CPU::CPU(Memory& memory, unsigned int& clock) :m_mem(memory), m_clock(clock)
 {
-	return PSW_PRIORITY;
+	fout.open("device_output.txt");	//initialize device output file
 }
 
 //CPU fetch function, emulate fetch routine
 void CPU::fetch()
 {
 	printf("PC = %4lx\n", PROGRAM_COUNTER);
-	if (PROGRAM_COUNTER == INVAILD_PC)	//if program counter is invaild, return from interrupt
+	if (PROGRAM_COUNTER % 2 == 1)	//if program counter is invaild, return from interrupt
 	{
+		if (PROGRAM_COUNTER == INVAILD_PC)
+		{
 
+		}
 	}
 	else	//if program counter is vaild
 	{
@@ -157,43 +159,43 @@ void CPU::execute()
 	}
 	case 8:	//Opcode = 001000 (BEQ/BZ)
 	{
-		if (PSW_ZERO > 0)	//if PSW.Z is set
+		if (GET_ZERO(PSW) > 0)	//if PSW.Z is set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
 	case 9:	//Opcode = 001001 (BNE/BNZ)
 	{
-		if (PSW_ZERO == 0)	//if PSW.Z is not set
+		if (GET_ZERO(PSW) == 0)	//if PSW.Z is not set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
 	case 10:	//Opcode = 001010 (BC/BHS)
 	{
-		if (PSW_CARRY > 0)	//if PSW.C is set
+		if (GET_CARRY(PSW) > 0)	//if PSW.C is set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
 	case 11:	//Opcode = 001011 (BNC/BLO)
 	{
-		if (PSW_CARRY == 0)	//if PSW.C is not set
+		if (GET_CARRY(PSW) == 0)	//if PSW.C is not set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
 	case 12:	//Opcode = 001100 (BN)
 	{
-		if (PSW_NEGATIVE > 0)	//if PSW.N is set
+		if (GET_NEGATIVE(PSW) > 0)	//if PSW.N is set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
 	case 13:	//Opcode = 001101 (BGE)
 	{
-		if (PSW_NEGATIVE == PSW_OVERFLOW)	//if (PSW.N XOR PSW.V) = 0 
+		if (GET_NEGATIVE(PSW) == GET_OVERFLOW(PSW))	//if (PSW.N XOR PSW.V) = 0 
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
 	case 14:	//Opcode = 001110 (BLT)
 	{
-		if (PSW_NEGATIVE != PSW_OVERFLOW)	//if (PSW.N XOR PSW.V) != 0 
+		if (GET_NEGATIVE(PSW) != GET_OVERFLOW(PSW))	//if (PSW.N XOR PSW.V) != 0 
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
@@ -431,7 +433,7 @@ void CPU::execute()
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
 			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&PSW_CARRY) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
@@ -439,7 +441,7 @@ void CPU::execute()
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
 			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&PSW_CARRY) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -471,7 +473,7 @@ void CPU::execute()
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
 			unsigned char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&PSW_CARRY) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
@@ -479,7 +481,7 @@ void CPU::execute()
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
 			unsigned short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&PSW_CARRY) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -491,7 +493,7 @@ void CPU::execute()
 		{
 			unsigned char data1 = (unsigned char) Register_file[DST];	//get data from reigister[DST]
 			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&PSW_CARRY) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
@@ -499,7 +501,7 @@ void CPU::execute()
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
 			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&PSW_CARRY) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -583,7 +585,7 @@ void CPU::execute()
 	}
 	case 113:	//Opcode = 0111 0001 (SRA)
 	{
-		//PSW |= (Register_file[DST] & BIT_ONE) > 0 ? PSW_CARRY : 0;	//set lsb to carry
+		//PSW |= (Register_file[DST] & BIT_ONE) > 0 ? GET_CARRY(PSW) : 0;	//set lsb to carry
 		//Register_file[DST] = Register_file[DST] >> 1;	//shift right one bit
 		//Register_file[DST] |= (Register_file[DST] & BIT_FOURTEEN) > 1 ? BIT_FIFTEEN : 0;	//set msb if have sign
 		break;
@@ -669,10 +671,48 @@ void CPU::execute()
 //check interrput to emulate interrupt
 void CPU::check_interrupt()
 {
-	for (unsigned short i = 0; i < 16; i += 2)
+	//check pending interrupt(s) and add to interrupt queue
+	std::map<unsigned char /*priority*/, unsigned char /*device number*/> dev_interrupt;
+	for (unsigned short dev_number = 0; dev_number < 8; dev_number++)	//check each device's control/status register
 	{
-
+		unsigned short LByte_CSR = 0;
+		m_mem.bus(dev_number *2, LByte_CSR, READ, BYTE);	//get device's CSR low byte
+		if ((LByte_CSR&CSR_IE) > 0 && (LByte_CSR&CSR_DBA) > 0)	//if interrupt generated
+		{
+			unsigned short dev_psw = 0;
+			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_number), dev_psw, READ);
+			unsigned char dev_priority = GET_PRIORITY(dev_psw);
+			dev_interrupt.emplace(dev_priority, dev_number);
+		}
+		if ((LByte_CSR&CSR_IO) == 0 && (LByte_CSR&CSR_DBA) > 0)	//if output device need to output data
+		{
+			unsigned short CSR = 0;
+			m_mem.bus(dev_number * 2, CSR, READ);	//get device's CSR
+			output_data_info info(GET_DATA(CSR), dev_number);
+			unsigned int output_time = m_clock + device_process_time[dev_number];	//get output time
+			output_list[output_time].emplace_back(info);	//add to list of output data
+		}
 	}
+	interrput_queue.emplace_back(dev_interrupt);
+
+	//output data tooutput file
+	while (output_list.begin()->first <m_clock)	//if there is data need write to to output file now
+	{
+		for (size_t i = 0; i < output_list[m_clock].size(); i++)
+		{
+			fout << "at time " << m_clock << ", device " << output_list[m_clock].front().device_num << " output " << output_list[m_clock].front().data << std::endl;	//output the data to output file
+			output_list[m_clock].pop_front();	//pop this output_data_info from the queue
+		}
+		output_list.erase(m_clock);	//pop the queue of this time from output_list
+	}
+
+	//process pending interrupt(s)
+}
+
+//get current priority
+unsigned char CPU::get_current_priority()
+{
+	return GET_PRIORITY(PSW);
 }
 
 /*
@@ -712,32 +752,32 @@ void CPU::ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned
 	//indicate setting carry flag
 	if ((result&carry_bit) > 0)	//if has carry
 	{
-		PSW |= PSW_CARRY;	//set carry
+		PSW |= GET_CARRY(PSW);	//set carry
 		result -= carry_bit;	//unset carry bit from zero checking
 	}
 	else	//if no carry
-		PSW &= ~PSW_CARRY;	//clear carry
+		PSW &= ~GET_CARRY(PSW);	//clear carry
 
 	//indicate setting overflow flag
 	if ((DST_Data&sign_bit) == (SRC_Data&sign_bit))	//if source and destination have same sign
 	{
 		if ((DST_Data&sign_bit) != (result&sign_bit))	//if result and source have different sign
-			PSW |= PSW_OVERFLOW;	//set overflow flag
+			PSW |= GET_OVERFLOW(PSW);	//set overflow flag
 		else //clear overflow
-			PSW &= ~PSW_OVERFLOW;	//clear overflow flag
+			PSW &= ~GET_OVERFLOW(PSW);	//clear overflow flag
 	}
 	else //clear overflow
-		PSW &= ~PSW_OVERFLOW;	//clear overflow flag
+		PSW &= ~GET_OVERFLOW(PSW);	//clear overflow flag
 
 	//indicate setting negative flag
 	if ((result&sign_bit) > 0)	//if result is negative
-		PSW |= PSW_NEGATIVE;	//set carry
+		PSW |= GET_NEGATIVE(PSW);	//set carry
 	else //clear negative
-		PSW &= ~PSW_NEGATIVE;	//clear negative flag
+		PSW &= ~GET_NEGATIVE(PSW);	//clear negative flag
 
 	//indicate setting zero flag
 	if (result == 0)
-		PSW |= PSW_ZERO;	//set zero
+		PSW |= GET_ZERO(PSW);	//set zero
 	else //clear zero
-		PSW &= ~PSW_ZERO;	//clear zero flag
+		PSW &= ~GET_ZERO(PSW);	//clear zero flag
 }

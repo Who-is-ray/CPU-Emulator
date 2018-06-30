@@ -20,18 +20,18 @@ int help_func()
 {
 	int user_cmd;	//user's command
 	std::cout << "\nCommand list:\n"
-		<< "1. Load S-Record file\n"
-		<< "2. Add a Program Counter break point\n"
-		<< "3. Add a CPU clock break point\n"
-		<< "4. Delete a Program Counter break point\n"
-		<< "5. Delete a clock break point\n"
-		<< "6. Display all break point(s)\n"
-		<< "7. Display a data from a memory\n"
-		<< "8. Display a data from a register\n"
-		<< "9. Update a data from a memory\n"
-		<< "10. Update a data from a register\n"
-		<< "11. Run CPU\n"
-		<< "12. Exit"
+		<< " 1: Load S-Record file\n"
+		<< " 2: Add a Program Counter break point\n"
+		<< " 3: Set clock limit\n"
+		<< " 4: Delete a Program Counter break point\n"
+		<< " 5: Display clock limit\n"
+		<< " 6: Display all break point(s)\n"
+		<< " 7: Display a data from a memory\n"
+		<< " 8: Display a data from a register\n"
+		<< " 9: Update a data from a memory\n"
+		<< "10: Update a data from a register\n"
+		<< "11: Run CPU\n"
+		<< "12: Exit"
 		<<"\nChoose a command, type the number of command:	";
 	std::cin >> user_cmd;
 	return user_cmd;
@@ -45,7 +45,7 @@ int help_func()
 void sigint_hdlr()
 {
 	cpu_is_running = false;
-	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//reset call signal() - bind sigint_hdlr to SIGINT 
+	signal(SIGINT, (_crt_signal_t)sigint_hdlr); /* Reinitialize SIGINT */
 }
 
 /*
@@ -141,8 +141,9 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
-	Memory mem;	//initialize memory
-	CPU m_CPU(mem);
+	unsigned int clock = 0;	//Initialize clock
+	Memory mem(clock);	//initialize memory
+	CPU m_CPU(mem, clock);
 	int user_cmd=0;	//user's command
 	debugger_is_running = true;
 
@@ -175,6 +176,11 @@ void Debugger::run_debugger()
 		case 4:	//delete a break point from PC list
 		{
 			dlt_PC_BP();
+			break;
+		}
+		case 5:	//display clock limit
+		{
+			std::cout << "Clock limit is: " << clock_limit << std::endl;
 			break;
 		}
 		case 6:	//display all break point list

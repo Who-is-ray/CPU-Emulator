@@ -9,11 +9,12 @@ class Memory;
 class Debugger
 {
 public:
-	Debugger() {}	//constructor
+	Debugger() { clock_limit = 1000; }	//constructor of debugger, set initial clock limit value to 1000
 	~Debugger() {}	//destructor
 
 	void run_debugger();	//function to run debugger called by main
 	bool load_SRecord(Memory& memory, CPU& m_CPU);	//The function to load S-Record data to memory
+	void load_device_file(Memory& memory);	//
 
 	void add_PC_BP();	//add a new break point triggered by program counter
 	void set_clk_limit();	//add a new break point triggered by CPU clock

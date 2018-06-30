@@ -118,7 +118,7 @@
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="Debugger.cpp" />
     <ClCompile Include="Memory.cpp" />
-    <ClCompile Include="mian.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPU.h" />
