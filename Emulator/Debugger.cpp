@@ -135,6 +135,26 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 }
 
 /*
+	the function to load device file
+*/
+bool Debugger::load_device_file(Memory& memory)
+{
+	std::string Device_fileName;
+	std::cout << "Input the file name of device file: ";	//ask user for file name
+	std::cin >> Device_fileName;	//get user's input
+	std::ifstream Device_file(Device_fileName);
+	bool rtv = Device_file.is_open();	//  Is filed opened successfully? Yes = true, No = false.
+	if (rtv)	// If open successfully, start loading S-Record
+	{
+		std::string line;
+		while (std::getline(Device_file, line))	//reading lines from input file
+		{
+
+		}
+	}
+}
+
+/*
 	function to run debugger called by main
 	accept user's command
 */
@@ -157,7 +177,7 @@ void Debugger::run_debugger()
 		case 1:	//Load S-Record
 		{
 			bool is_load = false;
-			while (!is_load)	//??need comment?  ??re think
+			while (!is_load)	//??need comment?
 			{
 				is_load = load_SRecord(mem, m_CPU);	//Call loading function
 			}
@@ -255,7 +275,7 @@ void Debugger::run_debugger()
 	}*/
 }
 
-//add a new break point triggered by program counter	??create new function for these functions?
+//add a new break point triggered by program counter
 void Debugger::add_PC_BP()
 {
 	std::cout << "Type in the Program Counter hex value of the new break point: ";
