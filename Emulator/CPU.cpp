@@ -693,10 +693,11 @@ void CPU::check_interrupt()
 			output_list[output_time].emplace_back(info);	//add to list of output data
 		}
 	}
-	interrput_queue.emplace_back(dev_interrupt);
+	if (dev_interrupt.size() > 0)
+		interrput_queue.emplace_back(dev_interrupt);
 
 	//output data tooutput file
-	while (output_list.begin()->first <m_clock)	//if there is data need write to to output file now
+	while (output_list.size()>0 && (output_list.begin()->first <m_clock))	//if there is data need write to to output file now
 	{
 		for (size_t i = 0; i < output_list[m_clock].size(); i++)
 		{
@@ -707,6 +708,8 @@ void CPU::check_interrupt()
 	}
 
 	//process pending interrupt(s)
+
+
 }
 
 //get current priority

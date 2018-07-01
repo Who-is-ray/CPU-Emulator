@@ -4,6 +4,7 @@
 #include<list>	//library for list
 #include<map>
 #include<vector>
+#include "Memory.h"	//header that define memory class
 
 class CPU;
 class Memory;
@@ -32,6 +33,7 @@ public:
 
 	void check_debugger_status(CPU& m_CPU, const unsigned int clock);	//check debugger status in CPU cycle after fetch decode execute
 	void check_device_table(Memory& mem, const unsigned int clock);	//check device table to emulate input output device
+	void update_CSR(ACTION rw, SIZE bw, unsigned short address, Memory& mem);
 
 private:
 	std::list<int> PC_BP_list;	//break point list relate to Program Counter 

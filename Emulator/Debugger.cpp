@@ -4,7 +4,6 @@
 #include <string>	//library for string
 #include "CPU.h"	//header that define CPU class
 #include <signal.h>	//Signal handling software
-#include "Memory.h"	//header that define memory class
 
 #define BASE_OF_HEX	16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD	10	//minimun size of S-Record
@@ -71,18 +70,22 @@ void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 //check device table to emulate input output device
 void Debugger::check_device_table(Memory& mem, const unsigned int clock)
 {
-	std::map<unsigned int /*time*/, std::vector<device_timetable_info>>::iterator it;
-	for (it = device_timetable.begin(); it !=device_timetable.end(); ++it)	//start check data comes in at this time
+	std::map<unsigned int /*time*/, std::vector<device_timetable_info>>::iterator it= device_timetable.begin();
+	while (it !=device_timetable.end())	//start check data comes in at this time
 	{
 		if (it->first <= clock)	//if there is data need to load
 		{
 			for (size_t i = 0; i < it->second.size(); i++)	//check each data need to load at this time
 			{
-				mem.m_memory.byte_mem[it->second[i].device_num * 2 + 1] |= it->second[i].data;	//load data to device CSR.data
-				mem.update_CSR(WRITE, WORD, it->second[i].device_num * 2);	//update device CSR
+				mem.m_memory.byte_mem[it->second[i].device_num * 2 + 1] = it->second[i].data;	//load data to device CSR.data
+				update_CSR(WRITE, WORD, it->second[i].device_num * 2, mem);	//update device CSR
 			}
-			device_timetable.erase(it->first);	//finished loading, remove request from timetable
+			int time = it->first;
+			it++;
+			device_timetable.erase(time);	//finished loading, remove request from timetable
 		}
+		else
+			it++;
 	}
 }
 
@@ -169,11 +172,11 @@ bool Debugger::load_device_file(Memory& memory, CPU& m_CPU)
 	bool rtv = false;
 	if (Device_file != nullptr)	// If open successfully, start loading S-Record
 	{
-		unsigned char in_out = 0, dev_num = 0;
+		unsigned int in_out = 0, dev_num = 0;
 		unsigned int process_time = 0;
 		while (dev_num<8)	//reading the first 8 lines from input file for device initialization
 		{	
-			fscanf(Device_file, "%c\t%c\t%u", &dev_num, &in_out, &process_time);
+			fscanf(Device_file, "%u\t%u\t%u", &dev_num, &in_out, &process_time);
 			if (in_out == 1)	//if is input device
 				memory.m_memory.byte_mem[dev_num * 2] = CSR_INPUT_INIT;	//set CSR.IO
 			else	//if is output device
@@ -186,7 +189,7 @@ bool Debugger::load_device_file(Memory& memory, CPU& m_CPU)
 
 		unsigned int time = 0;
 		unsigned char data = 0;
-		while (fscanf(Device_file, "%u	%c	%c", &time, &dev_num, &data) != EOF)	//loading data for device
+		while (fscanf(Device_file, "%u	%u	%c", &time, &dev_num, &data) != EOF)	//loading data for device
 		{
 			device_timetable[time].emplace_back(dev_num, data);
 		}
@@ -305,7 +308,7 @@ void Debugger::run_debugger()
 				m_CPU.decode();
 				m_CPU.execute();
 				check_device_table(mem, clock);
-				//m_CPU.check_interrupt();
+				m_CPU.check_interrupt();
 				check_debugger_status(m_CPU, clock);
 			}
 			break;
@@ -366,4 +369,14 @@ void Debugger::display_BP(std::string cmt, std::list<int>& l)
 	l.sort();
 	for (std::list<int>::iterator it = l.begin(); it != l.end(); it++)	//display each element in the list
 		printf("%4lx\n", *it);
+}
+
+//update CSR after process with CSR.data
+void Debugger::update_CSR(ACTION rw, SIZE bw, unsigned short address, Memory& mem)
+{
+	if (bw = WORD)	//if processing word size data, process with CSR.data
+	{
+		if ((mem.m_memory.byte_mem[address] & CSR_IO) > 0 && rw == WRITE)	//if reading from input device's control/status register
+			mem.m_memory.byte_mem[address] |= (mem.m_memory.byte_mem[address] & CSR_DBA) > 0 ? CSR_OF : CSR_DBA;	//set DBA, set OF if DBA was set
+	}
 }
