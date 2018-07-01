@@ -12,8 +12,8 @@ class Memory;
 struct output_data_info
 {
 	unsigned char data;	//output char
-	unsigned char device_num;	//output device number
-	output_data_info(unsigned char d, unsigned char n) { data = d; device_num = n; }	//constructor of struct output_data_info
+	unsigned int device_num;	//output device number
+	output_data_info(unsigned char d, unsigned int n) { data = d; device_num = n; }	//constructor of struct output_data_info
 };
 
 class CPU
@@ -46,7 +46,12 @@ private:
 	short get_relative_offset();	//return relative offset value from instruction (LDR STR)
 	short get_offset();	//return offset value from instruction	(BEQ/BZ to BAL)
 	void ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit, unsigned int sign_bit);	//updat psw register
+	void push_to_stack(unsigned short data_to_push);	//push a data to stack pointer
 
-	std::deque<std::map<unsigned char /*priority*/, unsigned char /*device number*/>> interrput_queue;	//queue of interrupt(s)
+	/*
+		queue of interrupt(s), this is the queue of maps, each map stores and sorts priority and device number of interrupt at one time point
+		because there could be multiple interrupt need to be process at same time
+	*/
+	std::deque<std::map<unsigned char /*priority*/, unsigned char /*device number*/>> interrput_queue;
 	std::map<unsigned int /*time to output*/, std::deque<output_data_info>> output_list;	//list to store output data
 };

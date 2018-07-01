@@ -48,7 +48,7 @@
 #define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X<<1)
 
 int opcode;	//opcode for decoding and executing
-std::ofstream fout;
+std::ofstream fout;	//device output file
 
 /*
 	constructor
@@ -676,40 +676,75 @@ void CPU::check_interrupt()
 	for (unsigned short dev_number = 0; dev_number < 8; dev_number++)	//check each device's control/status register
 	{
 		unsigned short LByte_CSR = 0;
+		unsigned short clear_dba = LByte_CSR | (~CSR_DBA);
 		m_mem.bus(dev_number *2, LByte_CSR, READ, BYTE);	//get device's CSR low byte
-		if ((LByte_CSR&CSR_IE) > 0 && (LByte_CSR&CSR_DBA) > 0)	//if interrupt generated
+		if ((LByte_CSR&CSR_DBA) > 0)	//if data need to process
 		{
-			unsigned short dev_psw = 0;
-			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_number), dev_psw, READ);
-			unsigned char dev_priority = GET_PRIORITY(dev_psw);
-			dev_interrupt.emplace(dev_priority, dev_number);
-		}
-		if ((LByte_CSR&CSR_IO) == 0 && (LByte_CSR&CSR_DBA) > 0)	//if output device need to output data
-		{
-			unsigned short CSR = 0;
-			m_mem.bus(dev_number * 2, CSR, READ);	//get device's CSR
-			output_data_info info(GET_DATA(CSR), dev_number);
-			unsigned int output_time = m_clock + device_process_time[dev_number];	//get output time
-			output_list[output_time].emplace_back(info);	//add to list of output data
+			if ((LByte_CSR&CSR_IE) > 0)	//if interrupt generated
+			{
+				//get device priority
+				unsigned short dev_psw = 0;
+				m_mem.bus(GET_DEV_VECTOR_ADDR(dev_number), dev_psw, READ);
+				unsigned char dev_priority = GET_PRIORITY(dev_psw);
+				dev_interrupt[dev_priority] = dev_number;//add to interrupt map
+				m_mem.bus(dev_number * 2, clear_dba, WRITE, BYTE);	//clear DBA
+
+				//??turn off the interrupt of this device and reopen it at the end of ISR?
+			}
+			if ((LByte_CSR&CSR_IO) == 0)	//if output device need to output data
+			{
+				unsigned short CSR = 0;
+				m_mem.bus(dev_number * 2, CSR, READ);	//get device's CSR
+				output_data_info info(GET_DATA(CSR), dev_number);
+				unsigned int output_time = m_clock + device_process_time[dev_number];	//get output time
+				output_list[output_time].emplace_back(info);	//add to list of output data
+				m_mem.bus(dev_number * 2, clear_dba, WRITE, BYTE);	//clear DBA
+			}
 		}
 	}
 	if (dev_interrupt.size() > 0)
 		interrput_queue.emplace_back(dev_interrupt);
 
 	//output data tooutput file
-	while (output_list.size()>0 && (output_list.begin()->first <m_clock))	//if there is data need write to to output file now
+	while (output_list.size() > 0 && (output_list.begin()->first <= m_clock))	//if there is data need write to to output file now
 	{
-		for (size_t i = 0; i < output_list[m_clock].size(); i++)
+		unsigned int time = output_list.begin()->first;
+		for (size_t i = 0; i < output_list[time].size(); i++)
 		{
-			fout << "at time " << m_clock << ", device " << output_list[m_clock].front().device_num << " output " << output_list[m_clock].front().data << std::endl;	//output the data to output file
-			output_list[m_clock].pop_front();	//pop this output_data_info from the queue
+			fout << "at time " << m_clock << ", device " << output_list[time].front().device_num << " output " << output_list[time].front().data << std::endl;	//output the data to output file
+			output_list[time].pop_front();	//pop this output_data_info from the queue
 		}
-		output_list.erase(m_clock);	//pop the queue of this time from output_list
+		output_list.erase(time);	//pop the queue of this time from output_list
 	}
 
 	//process pending interrupt(s)
+	if (interrput_queue.size() > 0)	//if there is/are interrupt need to be process
+	{
+		std::deque<std::map<unsigned char /*priority*/, unsigned char /*device number*/>>::iterator it = interrput_queue.begin();	//get the earliest interrupt map in the queue
 
+		unsigned char dev_priority = it->rbegin()->first;	//get the highest device's priority (the last one in the map, map automically sort element based on key value(priority))
+		if (dev_priority > GET_PRIORITY(PSW))	//if device's priority > current CPU's priority, process interrupt
+		{
+			unsigned char dev_num = it->rbegin()->second;	//get device number
+			push_to_stack(PROGRAM_COUNTER);	//push program counter to stack
+			push_to_stack(PSW);	//push PSW to stack
+			push_to_stack(LINK_REGISTER);	//push LR to stack
 
+			//the handler¡¯s PSW becomes the current PSW
+			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
+			PSW = MDR;
+
+			//PC points to ISR
+			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num) + 2, MDR, READ);
+			PROGRAM_COUNTER = MDR;
+
+			LINK_REGISTER = 0xffff;	//set LR to #$ffff
+
+			it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
+			if (it->size() == 0)	//if the interrupt map of a time point is empty, erase this map from interrupt queue
+				interrput_queue.pop_front();
+		}
+	}
 }
 
 //get current priority
@@ -783,4 +818,11 @@ void CPU::ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned
 		PSW |= GET_ZERO(PSW);	//set zero
 	else //clear zero
 		PSW &= ~GET_ZERO(PSW);	//clear zero flag
+}
+
+void CPU::push_to_stack(unsigned short data_to_push)	//push a data to stack pointer
+{
+	MDR = data_to_push;
+	STACK_POINTER -= 2;
+	m_mem.bus(STACK_POINTER, MDR, WRITE);
 }

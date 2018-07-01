@@ -148,7 +148,7 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 					break;
 				}
 			}
-			else if (type == "S0")
+			else if (type == "S0")	//do nothing for S0 record
 			{}
 			else
 				rtv = false;
@@ -196,6 +196,8 @@ bool Debugger::load_device_file(Memory& memory, CPU& m_CPU)
 		rtv = true;
 	}
 	fclose(Device_file);
+	if (!rtv)	//if loading failed
+		std::cout << "Loading failed! Try again!\n";
 	return rtv;
 }
 
@@ -376,7 +378,7 @@ void Debugger::update_CSR(ACTION rw, SIZE bw, unsigned short address, Memory& me
 {
 	if (bw = WORD)	//if processing word size data, process with CSR.data
 	{
-		if ((mem.m_memory.byte_mem[address] & CSR_IO) > 0 && rw == WRITE)	//if reading from input device's control/status register
+		if (rw == WRITE)	//if reading from input device's control/status register
 			mem.m_memory.byte_mem[address] |= (mem.m_memory.byte_mem[address] & CSR_DBA) > 0 ? CSR_OF : CSR_DBA;	//set DBA, set OF if DBA was set
 	}
 }
