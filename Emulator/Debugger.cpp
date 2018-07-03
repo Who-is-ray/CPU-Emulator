@@ -10,8 +10,8 @@
 #define START_BIT_OF_COUNT	2	//start bit of count of S-Record
 #define ADDRESS_OF_PROGRAM_COUNTER	7	//address of program counter
 
-bool cpu_is_running;	//indicate whether cpu should keep running
-bool debugger_is_running;	//indicate whether debugger should keep running
+bool cpu_is_running;		//flag that indicate whether cpu should keep running
+bool debugger_is_running;	//flag that indicate whether debugger should keep running
 
 //Function to display help list
 int help_func()
@@ -54,6 +54,9 @@ void sigint_hdlr()
 void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
+	//printf("PC = %4lx\n", PROGRAM_COUNTER);	//program counter test print out
+	//std::cout << "clock = " << clock << "\n";	//clock test print out
+
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
 		cpu_is_running = false;
@@ -178,10 +181,10 @@ bool Debugger::load_device_file(Memory& memory, CPU& m_CPU)
 		{	
 			fscanf(Device_file, "%u\t%u\t%u", &dev_num, &in_out, &process_time);
 			if (in_out == 1)	//if is input device
-				memory.m_memory.byte_mem[dev_num * 2] = CSR_INPUT_INIT;	//set CSR.IO
+				memory.m_memory.byte_mem[dev_num * 2] = CSR_SET_INPUT;	//set CSR.IO
 			else	//if is output device
 			{
-				memory.m_memory.byte_mem[dev_num * 2] &= CSR_OUTPUT_INIT;	//clear CSR.IO
+				memory.m_memory.byte_mem[dev_num * 2] &= CSR_SET_OUTPUT;	//clear CSR.IO
 				m_CPU.device_process_time[dev_num] = process_time;	//add device's processing time to processing time table
 			}
 			dev_num++;	//load initialization info for next device
@@ -325,12 +328,11 @@ void Debugger::run_debugger()
 		}
 	}
 	
-	//memeory test output
-	/*for (size_t i = 200; i < 500; i++)
-	{
-		std::cout << i << "\t";
-		printf("%02lx\n", mem.m_memory.byte_mem[i]);
-	}*/
+	////memeory test output
+	//for (size_t i = 250; i < 400; i++)
+	//{
+	//	printf("mem[%04lx]\t%02lx\n", i, mem.m_memory.byte_mem[i]);
+	//}
 }
 
 //add a new break point triggered by program counter

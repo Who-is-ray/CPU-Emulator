@@ -30,18 +30,20 @@
 #define	W_B		(IR&(1<<6))		//W_B bit of instruction bit 7
 #define	DST		(unsigned char)(IR&0b111)	//DST value from instruction bit 2 to 0
 #define SRC		(unsigned char)((IR&0b111000)>>3)	//SRC value from instruction bit 5 to 3
-#define DATA	(unsigned char)((IR&0b11111111000) >> 3)	//Data value from instruction bit 10 to 3
+#define DATA	(unsigned short)((IR&0b11111111000) >> 3)	//Data value from instruction bit 10 to 3
 #define	BRANCH_OFFSET					(IR&0b1111111111)<<1
 #define BRANCH_OFFSET_SIGN				(IR & 1<<9)
 #define BRANCH_OFFSET_SIGN_EXTENSION	0b1111100000000000
 #define BL_SIGN_EXTENSION				0b1100000000000000
-#define	RELATIVE_OFFSET					(IR & 0b1111110000000) >> 6
+#define	RELATIVE_OFFSET					(IR & 0b1111110000000) >> 7
 #define RELATIVE_SIGN_EXTENSION			0b1111111110000000
 #define BYTE_SIGN_BIT	1<<7
 #define WORD_SIGN_BIT	1<<15
 #define BYTE_CARRY_BIT	1<<8
 #define WORD_CARRY_BIT	1<<16
 #define BIT_ONE			1
+#define BIT_SIX			1<<6
+#define BIT_SEVEN		1<<7
 #define BIT_TWELVE		1<<11
 #define BIT_FOURTEEN	1<<13
 #define BIT_FIFTEEN		1<<14
@@ -63,21 +65,18 @@ CPU::CPU(Memory& memory, unsigned int& clock) :m_mem(memory), m_clock(clock)
 //CPU fetch function, emulate fetch routine
 void CPU::fetch()
 {
-	printf("PC = %4lx\n", PROGRAM_COUNTER);
-	if (PROGRAM_COUNTER % 2 == 1)	//if program counter is invaild, return from interrupt
+	if (PROGRAM_COUNTER == INVAILD_PC)	//if program counter is invaild, return from interrupt
 	{
-		if (PROGRAM_COUNTER == INVAILD_PC)
-		{
+		pull_from_stack(LINK_REGISTER);	//pull LR
+		pull_from_stack(PSW);	//pull PSW
+		pull_from_stack(PROGRAM_COUNTER);	//pull PC
+	}
 
-		}
-	}
-	else	//if program counter is vaild
-	{
-		MAR = PROGRAM_COUNTER;	//load program counter to MAR
-		m_mem.bus(MAR, MDR, READ);	//read through bus, load insturction to MDR
-		IR = MDR;	//load instruction from MDR to IR
-		PROGRAM_COUNTER += 2;	//update program counter
-	}
+	//if program counter is vaild
+	MAR = PROGRAM_COUNTER;	//load program counter to MAR
+	m_mem.bus(MAR, MDR, READ);	//read through bus, load insturction to MDR
+	IR = MDR;	//load instruction from MDR to IR
+	PROGRAM_COUNTER += 2;	//update program counter
 }
 
 /*
@@ -404,7 +403,7 @@ void CPU::execute()
 	case 20:	//Opcode = 10100 (MOVH)
 	{
 		Register_file[DST] &= LOWER_BYTE;	//clear high byte of register
-		Register_file[DST] += (DATA << BYTE_SIZE);	//load data to high byte of destination register and shift to high byte
+		Register_file[DST] |= (DATA << BYTE_SIZE);	//load data to high byte of destination register and shift to high byte
 		break;
 	}
 	case 96:	//Opcode = 0110 0000 (ADD)
@@ -585,9 +584,20 @@ void CPU::execute()
 	}
 	case 113:	//Opcode = 0111 0001 (SRA)
 	{
-		//PSW |= (Register_file[DST] & BIT_ONE) > 0 ? GET_CARRY(PSW) : 0;	//set lsb to carry
-		//Register_file[DST] = Register_file[DST] >> 1;	//shift right one bit
-		//Register_file[DST] |= (Register_file[DST] & BIT_FOURTEEN) > 1 ? BIT_FIFTEEN : 0;	//set msb if have sign
+		PSW |= (Register_file[DST] & BIT_ONE) > 0 ? 1 : 0;	//set lsb to carry
+		if (W_B > 0)	//if processing byte size data
+		{
+			unsigned short LSByte = Register_file[DST] & LOWER_BYTE;	//get lowbyte of destination register
+			Register_file[DST] &= HIGHER_BYTE;	//clear loybyte of destination register
+			LSByte >> 1;	//shift right one bit
+			LSByte |= (Register_file[DST] & BIT_SIX) > 1 ? BIT_SEVEN : 0;	//set msb if have sign
+			Register_file[DST] |= LSByte;	//store back to register
+		}
+		else	//if processing word size data
+		{
+			Register_file[DST] = Register_file[DST] >> 1;	//shift right one bit
+			Register_file[DST] |= (Register_file[DST] & BIT_FOURTEEN) > 1 ? BIT_FIFTEEN : 0;	//set msb if have sign
+		}
 		break;
 	}
 	case 114:	//Opcode = 0111 0010 (BIC)
@@ -612,7 +622,21 @@ void CPU::execute()
 	}
 	case 115:	//Opcode = 0111 0011 (RRC)
 	{
-
+		unsigned char carry = GET_CARRY(PSW);
+		PSW |= (Register_file[DST] & BIT_ONE) > 0 ? 1 : 0;	//set lsb to carry
+		if (W_B > 0)	//if processing byte size data
+		{
+			unsigned short LSByte = Register_file[DST] & LOWER_BYTE;	//get lowbyte of destination register
+			Register_file[DST] &= HIGHER_BYTE;	//clear loybyte of destination register
+			LSByte >> 1;	//shift right one bit
+			LSByte |= carry > 1 ? BIT_SEVEN : 0;	//set msb if have sign
+			Register_file[DST] |= LSByte;	//store back to register
+		}
+		else	//if processing word size data
+		{
+			Register_file[DST] = Register_file[DST] >> 1;	//shift right one bit
+			Register_file[DST] |= carry > 1 ? BIT_FIFTEEN : 0;	//set msb if have sign
+		}
 		break;
 	}
 	case 116:	//Opcode = 0111 0100 (BIS)
@@ -635,9 +659,11 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 117:	//Opcode = 0111 0101 (SWPB)	??need to update psw?
+	case 117:	//Opcode = 0111 0101 (SWPB)
 	{
-
+		unsigned short low_byte = Register_file[DST] << 8;	//get low byte of register and shift to high byte
+		Register_file[DST] = Register_file[DST] >> 8;	//shift high byte data to low byte
+		Register_file[DST] |= low_byte;	//load low byte data to high byte
 		break;
 	}
 	case 118:	//Opcode = 0111 0110 (MOV)
@@ -650,7 +676,7 @@ void CPU::execute()
 	}
 	case 119:	//Opcode = 0111 0111 (SXT)
 	{
-
+		Register_file[DST] |= (Register_file[DST] & BIT_SEVEN) > 0 ? HIGHER_BYTE : 0;	//if seventh byte set, do sign extension
 		break;
 	}
 	case 120:	//Opcode = 0111 1000 (SWAP)
@@ -825,4 +851,11 @@ void CPU::push_to_stack(unsigned short data_to_push)	//push a data to stack poin
 	MDR = data_to_push;
 	STACK_POINTER -= 2;
 	m_mem.bus(STACK_POINTER, MDR, WRITE);
+}
+
+void CPU::pull_from_stack(unsigned short& data_to_pull)
+{
+	m_mem.bus(STACK_POINTER, MDR, READ);
+	STACK_POINTER += 2;
+	data_to_pull = MDR;
 }

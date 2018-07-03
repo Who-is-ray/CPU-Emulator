@@ -6,15 +6,15 @@
 #define CSR_DBA	1<<2	//control/status register bit DBA
 #define CSR_IO	1<<1	//control/status register bit I/O
 #define CSR_IE	1		//control/status register bit IE
-#define CSR_INPUT_INIT 2
-#define CSR_OUTPUT_INIT 0
+#define CSR_SET_INPUT 2	//value to set CSR input
+#define CSR_SET_OUTPUT 0	//value to set CSR output
 
 enum SIZE { BYTE, WORD };	//enum of size, byte = 0, word = 1
 enum ACTION { READ, WRITE };	//enum of action, read = 0, write = 1
 
 union memory	//memory union	??put in cpp file?
 {
-	unsigned char byte_mem[SIZE_OF_BYTE_MEMORY];	//memory array of byte size elements
+	unsigned char byte_mem[SIZE_OF_BYTE_MEMORY]{0};	//memory array of byte size elements
 	unsigned short word_mem[SIZE_OF_WORD_MEMORY];	//memory array of word size elements
 };
 
