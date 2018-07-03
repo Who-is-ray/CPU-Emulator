@@ -49,6 +49,18 @@
 #define BIT_FIFTEEN		1<<14
 #define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X<<1)
 
+enum Opcode
+{
+	BL=0,		LDR=6,		STR,		BEQ_BZ,		BNE_BNZ,
+	BC_BHS,		BNC_BLO,	BN,			BGE,		BLT,
+	BAL,		LD,			ST,			MOVL,		MOVLZ,
+	MOVH,		ADD=96,		ADDC=98,	SUB=100,	SUBC=102,
+	DADD=104,	CMP=106,	XOR=108,	AND=110,	BIT=112,
+	SRA,		BIC,		RRC,		BIS,		SWPB,
+	MOV,		SXT,		SWAP
+
+};
+
 int opcode;	//opcode for decoding and executing
 std::ofstream fout;	//device output file
 
@@ -122,9 +134,10 @@ void CPU::decode()
 //CPU execute function, emulate execute routine
 void CPU::execute()
 {
+	m_clock++;	//increment of clock for all instruction
 	switch (opcode)
 	{
-	case 0:	//Opcode = 000 (BL)
+	case BL:	//Opcode = 000 (BL)
 	{
 		LINK_REGISTER = PROGRAM_COUNTER;	//load program counter to link register
 		short offset = IR << 1;	//shift offset to right 1 bit
@@ -132,7 +145,7 @@ void CPU::execute()
 		PROGRAM_COUNTER += offset;	//update program counter
 		break;
 	}
-	case 6:	//Opcode = 110 (LDR)
+	case LDR:	//Opcode = 110 (LDR)
 	{
 		unsigned short source = Register_file[SRC];	//get source memory address
 		MAR = source + get_relative_offset();	//store source address + offset to MAR
@@ -146,64 +159,66 @@ void CPU::execute()
 			m_mem.bus(MAR, MDR, READ);	//access memory
 			Register_file[DST] = MDR;	//store data from MDR to destination register
 		}
+		m_clock += 2;	//extra increment of clock for this instruction
 		break;
 	}
-	case 7:	//Opcode = 111 (STR)
+	case STR:	//Opcode = 111 (STR)
 	{
 		unsigned short dst_address = Register_file[DST];	//get destination memory address
 		MAR = dst_address + get_relative_offset();	//store source address + offset to MAR
 		MDR = Register_file[SRC];	//store register value to MDR
 		W_B > 0 ? m_mem.bus(MAR, MDR, WRITE, BYTE) : m_mem.bus(MAR, MDR, WRITE);	//access memory byte|word size data
+		m_clock += 2;	//extra increment of clock for this instruction
 		break;
 	}
-	case 8:	//Opcode = 001000 (BEQ/BZ)
+	case BEQ_BZ:	//Opcode = 001000 (BEQ/BZ)
 	{
 		if (GET_ZERO(PSW) > 0)	//if PSW.Z is set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 9:	//Opcode = 001001 (BNE/BNZ)
+	case BNE_BNZ:	//Opcode = 001001 (BNE/BNZ)
 	{
 		if (GET_ZERO(PSW) == 0)	//if PSW.Z is not set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 10:	//Opcode = 001010 (BC/BHS)
+	case BC_BHS:	//Opcode = 001010 (BC/BHS)
 	{
 		if (GET_CARRY(PSW) > 0)	//if PSW.C is set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 11:	//Opcode = 001011 (BNC/BLO)
+	case BNC_BLO:	//Opcode = 001011 (BNC/BLO)
 	{
 		if (GET_CARRY(PSW) == 0)	//if PSW.C is not set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 12:	//Opcode = 001100 (BN)
+	case BN:	//Opcode = 001100 (BN)
 	{
 		if (GET_NEGATIVE(PSW) > 0)	//if PSW.N is set
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 13:	//Opcode = 001101 (BGE)
+	case BGE:	//Opcode = 001101 (BGE)
 	{
 		if (GET_NEGATIVE(PSW) == GET_OVERFLOW(PSW))	//if (PSW.N XOR PSW.V) = 0 
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 14:	//Opcode = 001110 (BLT)
+	case BLT:	//Opcode = 001110 (BLT)
 	{
 		if (GET_NEGATIVE(PSW) != GET_OVERFLOW(PSW))	//if (PSW.N XOR PSW.V) != 0 
 			PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 15:	//Opcode = 001111 (BAL)
+	case BAL:	//Opcode = 001111 (BAL)
 	{
 		PROGRAM_COUNTER += get_offset();	//Update program counter with offset
 		break;
 	}
-	case 16:	//Opcode = 10000 (LD)
+	case LD:	//Opcode = 10000 (LD)
 	{
 		if ((IR&DEC) > 0)	//if DEC set
 		{
@@ -294,9 +309,10 @@ void CPU::execute()
 				Register_file[DST] = MDR;	//load data from MDR to DST register
 			}
 		}
+		m_clock += 2;	//extra increment of clock for this instruction
 		break;
 	}
-	case 17:	//Opcode = 10000 (ST)
+	case ST:	//Opcode = 10000 (ST)
 	{
 		if ((IR&DEC) > 0)	//if DEC set
 		{
@@ -387,26 +403,27 @@ void CPU::execute()
 				m_mem.bus(MAR, MDR, WRITE);	//access memory
 			}
 		}
+		m_clock += 2;	//extra increment of clock for this instruction
 		break;
 	}
-	case 18:	//Opcode = 10010 (MOVL)
+	case MOVL:	//Opcode = 10010 (MOVL)
 	{
 		write_byte_to_dst(Register_file[DST], DATA);	//load data to destination register low byte
 		break;
 	}
-	case 19:	//Opcode = 10011 (MOVLZ)
+	case MOVLZ:	//Opcode = 10011 (MOVLZ)
 	{
 		Register_file[DST] &= 0;	//clear all bit of destination register
 		Register_file[DST] = DATA;	//load data to destination register low byte
 		break;
 	}
-	case 20:	//Opcode = 10100 (MOVH)
+	case MOVH:	//Opcode = 10100 (MOVH)
 	{
 		Register_file[DST] &= LOWER_BYTE;	//clear high byte of register
 		Register_file[DST] |= (DATA << BYTE_SIZE);	//load data to high byte of destination register and shift to high byte
 		break;
 	}
-	case 96:	//Opcode = 0110 0000 (ADD)
+	case ADD:	//Opcode = 0110 0000 (ADD)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -426,7 +443,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 98:	//Opcode = 0110 0010 (ADDC)
+	case ADDC:	//Opcode = 0110 0010 (ADDC)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -446,7 +463,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 100:	//Opcode = 0110 0100 (SUB)
+	case SUB:	//Opcode = 0110 0100 (SUB)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -466,7 +483,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 102:	//Opcode = 0110 0110 (SUBC)
+	case SUBC:	//Opcode = 0110 0110 (SUBC)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -486,7 +503,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 104:	//Opcode = 0110 1000 (DADD)
+	case DADD:	//Opcode = 0110 1000 (DADD)	!!need to change
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -506,7 +523,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 106:	//Opcode = 0110 1010 (CMP)
+	case CMP:	//Opcode = 0110 1010 (CMP)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -524,7 +541,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 108:	//Opcode = 0110 1100 (XOR)
+	case XOR:	//Opcode = 0110 1100 (XOR)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -544,7 +561,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 110:	//Opcode = 0110 1110 (AND)
+	case AND:	//Opcode = 0110 1110 (AND)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -564,7 +581,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 112:	//Opcode = 0111 0000 (BIT)
+	case BIT:	//Opcode = 0111 0000 (BIT)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -582,7 +599,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 113:	//Opcode = 0111 0001 (SRA)
+	case SRA:	//Opcode = 0111 0001 (SRA)
 	{
 		PSW |= (Register_file[DST] & BIT_ONE) > 0 ? 1 : 0;	//set lsb to carry
 		if (W_B > 0)	//if processing byte size data
@@ -600,7 +617,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 114:	//Opcode = 0111 0010 (BIC)
+	case BIC:	//Opcode = 0111 0010 (BIC)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -620,7 +637,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 115:	//Opcode = 0111 0011 (RRC)
+	case RRC:	//Opcode = 0111 0011 (RRC)
 	{
 		unsigned char carry = GET_CARRY(PSW);
 		PSW |= (Register_file[DST] & BIT_ONE) > 0 ? 1 : 0;	//set lsb to carry
@@ -639,7 +656,7 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 116:	//Opcode = 0111 0100 (BIS)
+	case BIS:	//Opcode = 0111 0100 (BIS)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
@@ -659,14 +676,14 @@ void CPU::execute()
 		}
 		break;
 	}
-	case 117:	//Opcode = 0111 0101 (SWPB)
+	case SWPB:	//Opcode = 0111 0101 (SWPB)
 	{
 		unsigned short low_byte = Register_file[DST] << 8;	//get low byte of register and shift to high byte
 		Register_file[DST] = Register_file[DST] >> 8;	//shift high byte data to low byte
 		Register_file[DST] |= low_byte;	//load low byte data to high byte
 		break;
 	}
-	case 118:	//Opcode = 0111 0110 (MOV)
+	case MOV:	//Opcode = 0111 0110 (MOV)
 	{
 		if (W_B > 0)	//if processing byte size data
 			write_byte_to_dst(Register_file[DST], (unsigned char)Register_file[SRC]);	//copy data from src to dst
@@ -674,12 +691,12 @@ void CPU::execute()
 			Register_file[DST] = Register_file[SRC];	//copy data from src to dst
 		break;
 	}
-	case 119:	//Opcode = 0111 0111 (SXT)
+	case SXT:	//Opcode = 0111 0111 (SXT)
 	{
 		Register_file[DST] |= (Register_file[DST] & BIT_SEVEN) > 0 ? HIGHER_BYTE : 0;	//if seventh byte set, do sign extension
 		break;
 	}
-	case 120:	//Opcode = 0111 1000 (SWAP)
+	case SWAP:	//Opcode = 0111 1000 (SWAP)
 	{
 		unsigned short tmp_reg = Register_file[DST];	//save DST register value to a temporary variable
 		Register_file[DST] = Register_file[SRC];	//copy source value to destination

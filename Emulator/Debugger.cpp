@@ -212,7 +212,7 @@ void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
 	unsigned int clock = 0;	//Initialize clock, the reason I put clock here is because clock usually are located outside CPU, such us matherboard
-	Memory mem(clock);	//initialize memory
+	Memory mem;	//initialize memory
 	CPU m_CPU(mem, clock);
 	int user_cmd=0;	//user's command
 	debugger_is_running = true;
