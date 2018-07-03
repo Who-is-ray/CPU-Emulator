@@ -7,8 +7,8 @@
 
 #define BASE_OF_HEX	16	//base of hexdecimal
 #define MIM_SIZE_OF_SRECORD	10	//minimun size of S-Record
-#define START_BIT_OF_COUNT	2	//start bit of count of S-Record
 #define ADDRESS_OF_PROGRAM_COUNTER	7	//address of program counter
+#define CORRECT_SUM	0xff
 
 bool cpu_is_running;		//flag that indicate whether cpu should keep running
 bool debugger_is_running;	//flag that indicate whether debugger should keep running
@@ -55,7 +55,7 @@ void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
 	//printf("PC = %4lx\n", PROGRAM_COUNTER);	//program counter test print out
-	//std::cout << "clock = " << clock << "\n";	//clock test print out
+	std::cout << "clock = " << clock << "\n";	//clock test print out
 
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
@@ -115,14 +115,14 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 
 			if (type == "S1" && record_size >= MIM_SIZE_OF_SRECORD)	// If it is S1 Record and record condition is correct
 			{
-				unsigned char count = static_cast<unsigned char>(strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX));	//get count from record and convert to integer	magic number??
-				unsigned short address = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
+				unsigned char count = static_cast<unsigned char>(strtol(line.substr(2, 2).c_str(), NULL, BASE_OF_HEX));	//get count(start from bit 2 and has 2-bit size) from record and convert to integer	magic number??
+				unsigned short address = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address(start from bit 4 and has 4-bit size) from record and convert to integer
 				unsigned char sum = count
 					+ static_cast<unsigned char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
 					+ static_cast<unsigned char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX));	//create sum = count + address.ll +address.hh
 				for (size_t i = 8; i < line.size() - 2; i += 2)	//start load data to memory
 				{
-					unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data to char
+					unsigned char data = static_cast<unsigned char>(strtol(line.substr(i, 2).c_str(), NULL, BASE_OF_HEX));	//convert data(has 2-bit size) to char
 					sum += data;
 					memory.m_memory.byte_mem[address] = data;	//load data to memory
 					address++;	//update destination address
@@ -137,14 +137,14 @@ bool Debugger::load_SRecord(Memory& memory, CPU& m_CPU)
 			}
 			else if (type == "S9" && record_size == 10)	// If it is S9 Record and record condition is correct
 			{
-				unsigned char count = static_cast<unsigned char>(strtol(line.substr(START_BIT_OF_COUNT, 2).c_str(), NULL, BASE_OF_HEX));	//get count from record and convert to integer
+				unsigned char count = static_cast<unsigned char>(strtol(line.substr(2, 2).c_str(), NULL, BASE_OF_HEX));	//get count from record and convert to integer
 				unsigned short PC = static_cast<unsigned short>(strtol(line.substr(4, 4).c_str(), NULL, BASE_OF_HEX));	//get address from record and convert to integer
 				unsigned char sum = count
 					+ static_cast<unsigned char>(strtol(line.substr(4, 2).c_str(), NULL, BASE_OF_HEX))
 					+ static_cast<unsigned char>(strtol(line.substr(6, 2).c_str(), NULL, BASE_OF_HEX))
 					+ (unsigned char)strtol(line.substr(line.size() - 2, 2).c_str(), NULL, BASE_OF_HEX);	//create sum = count + PC.ll +PC.hh
 				m_CPU.set_register_val(ADDRESS_OF_PROGRAM_COUNTER, PC);	//set Program Counter value
-				if ((int)sum != 255)	//check sum = ff
+				if ((int)sum != CORRECT_SUM)	//if check sum not equal to ff
 				{	//if check sum not correct
 					rtv = false;	//return false
 					std::cout << line << " --check sum not correct\n";

@@ -51,7 +51,7 @@
 
 enum Opcode
 {
-	BL=0,		LDR=6,		STR,		BEQ_BZ,		BNE_BNZ,
+	BL,			LDR=6,		STR,		BEQ_BZ,		BNE_BNZ,
 	BC_BHS,		BNC_BLO,	BN,			BGE,		BLT,
 	BAL,		LD,			ST,			MOVL,		MOVLZ,
 	MOVH,		ADD=96,		ADDC=98,	SUB=100,	SUBC=102,
@@ -79,9 +79,16 @@ void CPU::fetch()
 {
 	if (PROGRAM_COUNTER == INVAILD_PC)	//if program counter is invaild, return from interrupt
 	{
-		pull_from_stack(LINK_REGISTER);	//pull LR
-		pull_from_stack(PSW);	//pull PSW
-		pull_from_stack(PROGRAM_COUNTER);	//pull PC
+		if (interrput_queue.size() > 0)	//if there is pending interrupt at the end of last interrupt, process the latest interrupt	!!not sure is it correct
+		{
+
+		}
+		else	//there is no more pending interrupt
+		{
+			pull_from_stack(LINK_REGISTER);	//pull LR
+			pull_from_stack(PSW);	//pull PSW
+			pull_from_stack(PROGRAM_COUNTER);	//pull PC
+		}
 	}
 
 	//if program counter is vaild
@@ -89,6 +96,7 @@ void CPU::fetch()
 	m_mem.bus(MAR, MDR, READ);	//read through bus, load insturction to MDR
 	IR = MDR;	//load instruction from MDR to IR
 	PROGRAM_COUNTER += 2;	//update program counter
+	m_clock+=3;	//increment of clock for all instruction	//!!maybe need to move to bus
 }
 
 /*
@@ -159,7 +167,7 @@ void CPU::execute()
 			m_mem.bus(MAR, MDR, READ);	//access memory
 			Register_file[DST] = MDR;	//store data from MDR to destination register
 		}
-		m_clock += 2;	//extra increment of clock for this instruction
+		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case STR:	//Opcode = 111 (STR)
@@ -168,7 +176,7 @@ void CPU::execute()
 		MAR = dst_address + get_relative_offset();	//store source address + offset to MAR
 		MDR = Register_file[SRC];	//store register value to MDR
 		W_B > 0 ? m_mem.bus(MAR, MDR, WRITE, BYTE) : m_mem.bus(MAR, MDR, WRITE);	//access memory byte|word size data
-		m_clock += 2;	//extra increment of clock for this instruction
+		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case BEQ_BZ:	//Opcode = 001000 (BEQ/BZ)
@@ -309,7 +317,7 @@ void CPU::execute()
 				Register_file[DST] = MDR;	//load data from MDR to DST register
 			}
 		}
-		m_clock += 2;	//extra increment of clock for this instruction
+		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case ST:	//Opcode = 10000 (ST)
@@ -403,7 +411,7 @@ void CPU::execute()
 				m_mem.bus(MAR, MDR, WRITE);	//access memory
 			}
 		}
-		m_clock += 2;	//extra increment of clock for this instruction
+		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case MOVL:	//Opcode = 10010 (MOVL)
@@ -732,7 +740,7 @@ void CPU::check_interrupt()
 				dev_interrupt[dev_priority] = dev_number;//add to interrupt map
 				m_mem.bus(dev_number * 2, clear_dba, WRITE, BYTE);	//clear DBA
 
-				//??turn off the interrupt of this device and reopen it at the end of ISR?
+				//??!!turn off the interrupt of this device and reopen it at the end of ISR?
 			}
 			if ((LByte_CSR&CSR_IO) == 0)	//if output device need to output data
 			{
@@ -773,7 +781,7 @@ void CPU::check_interrupt()
 			push_to_stack(PSW);	//push PSW to stack
 			push_to_stack(LINK_REGISTER);	//push LR to stack
 
-			//the handler¡¯s PSW becomes the current PSW
+			//the handler's PSW becomes the current PSW
 			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
 			PSW = MDR;
 
@@ -786,6 +794,7 @@ void CPU::check_interrupt()
 			it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
 			if (it->size() == 0)	//if the interrupt map of a time point is empty, erase this map from interrupt queue
 				interrput_queue.pop_front();
+			m_clock += 9;	//time cost by prepare for interrupt
 		}
 	}
 }
