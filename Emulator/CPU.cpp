@@ -432,7 +432,7 @@ void CPU::execute()
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
 			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
@@ -440,7 +440,7 @@ void CPU::execute()
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
 			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -472,7 +472,7 @@ void CPU::execute()
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
 			unsigned char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
@@ -480,7 +480,7 @@ void CPU::execute()
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
 			unsigned short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -492,7 +492,7 @@ void CPU::execute()
 		{
 			unsigned char data1 = (unsigned char) Register_file[DST];	//get data from reigister[DST]
 			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
@@ -500,7 +500,7 @@ void CPU::execute()
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
 			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
-			unsigned int result = data1 + data2 + ((PSW&GET_CARRY(PSW)) > 1 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
+			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}

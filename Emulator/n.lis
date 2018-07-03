@@ -1,0 +1,22 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: n.txt
+
+  1	    	     	TAIL	equ	#$0600
+  2	    	     	org	#$500
+  3	0500	620A	addc R1,R2
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+TAIL                               	LBL	0600	1536
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\Emulator\Emulator\n.xme
+
