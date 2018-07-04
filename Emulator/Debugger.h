@@ -9,17 +9,17 @@
 class CPU;
 class Memory;
 
-struct device_timetable_info
+struct device_timetable_info	//information will be stored in device timetable
 {
-	unsigned char device_num;
-	unsigned char data;
-	device_timetable_info(unsigned char d_n, unsigned char d) { device_num = d_n; data = d; }
+	unsigned char device_num;	//device table
+	unsigned char data;	//input device's input data
+	device_timetable_info(unsigned char d_n, unsigned char d) { device_num = d_n; data = d; }	//constructor
 };
 
 class Debugger
 {
 public:
-	Debugger() { clock_limit = 1000; }	//constructor of debugger, set initial clock limit value to 1000
+	Debugger() { clock_limit = 1000000; }	//constructor of debugger, set initial clock limit value to 1000000
 	~Debugger() {}	//destructor
 
 	void run_debugger();	//function to run debugger called by main

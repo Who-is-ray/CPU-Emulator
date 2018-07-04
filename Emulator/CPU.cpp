@@ -21,6 +21,11 @@
 #define	GET_NEGATIVE(x)	(x&(1<<2))	//value of psw.negative
 #define	GET_SLP	(x)		(x&(1<<3))	//value of psw.sleep
 #define	GET_OVERFLOW(x)	(x&(1<<4))	//value of psw.overflow
+#define CARRY			1			//value of psw.carry
+#define	ZERO			(1<<1)		//value of psw.zero
+#define	NEGATIVE		(1<<2)		//value of psw.negative
+#define	SLP				(1<<3)		//value of psw.sleep
+#define	OVERFLOW		(1<<4)		//value of psw.overflow
 #define	GET_PRIORITY(x)	(unsigned char)(x&0b11100000)>>5	//value of psw.priority
 #define GET_DATA(x)		(unsigned char)(x>>8)	//get psw.data
 #define PRPO	(IR&(1<<10))	//PRPO bit of instruction bit 11
@@ -47,7 +52,7 @@
 #define BIT_TWELVE		1<<11
 #define BIT_FOURTEEN	1<<13
 #define BIT_FIFTEEN		1<<14
-#define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X<<1)
+#define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X*4)
 
 enum Opcode
 {
@@ -96,7 +101,6 @@ void CPU::fetch()
 	m_mem.bus(MAR, MDR, READ);	//read through bus, load insturction to MDR
 	IR = MDR;	//load instruction from MDR to IR
 	PROGRAM_COUNTER += 2;	//update program counter
-	m_clock+=3;	//increment of clock for all instruction	//!!maybe need to move to bus
 }
 
 /*
@@ -167,7 +171,6 @@ void CPU::execute()
 			m_mem.bus(MAR, MDR, READ);	//access memory
 			Register_file[DST] = MDR;	//store data from MDR to destination register
 		}
-		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case STR:	//Opcode = 111 (STR)
@@ -176,7 +179,6 @@ void CPU::execute()
 		MAR = dst_address + get_relative_offset();	//store source address + offset to MAR
 		MDR = Register_file[SRC];	//store register value to MDR
 		W_B > 0 ? m_mem.bus(MAR, MDR, WRITE, BYTE) : m_mem.bus(MAR, MDR, WRITE);	//access memory byte|word size data
-		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case BEQ_BZ:	//Opcode = 001000 (BEQ/BZ)
@@ -235,32 +237,26 @@ void CPU::execute()
 				if (W_B > 0)	//if processing byte size data
 				{
 					Register_file[SRC] -= 1;	//pre decrement action
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
-					write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
+					load_byte();
 				}
 				else	//if processing word size data
 				{
 					Register_file[SRC] -= 2;	//pre decrement action
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ);	//access memory
-					Register_file[DST] = MDR;	//load data from MDR to DST register
+					load_word();
 				}
 			}
+			
+			
 			else	//post-decrement action
 			{
 				if (W_B > 0)	//if processing byte size data
 				{
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
-					write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
+					load_byte();
 					Register_file[SRC] -= 1;	//post decrement action
 				}
 				else	//if processing word size data
 				{
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ);	//access memory
-					Register_file[DST] = MDR;	//load data from MDR to DST register
+					load_word();
 					Register_file[SRC] -= 2;	//pre decrement action
 				}
 			}
@@ -272,32 +268,24 @@ void CPU::execute()
 				if (W_B > 0)	//if processing byte size data
 				{
 					Register_file[SRC] += 1;	//pre increment action
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
-					write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
+					load_byte();
 				}
 				else	//if processing word size data
 				{
 					Register_file[SRC] += 2;	//pre increment action
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ);	//access memory
-					Register_file[DST] = MDR;	//load data from MDR to DST register
+					load_word();
 				}
 			}
 			else	//post-increment action
 			{
 				if (W_B > 0)	//if processing byte size data
 				{
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
-					write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
+					load_byte();
 					Register_file[SRC] += 1;	//post increment action
 				}
 				else	//if processing word size data
 				{
-					MAR = Register_file[SRC];	//load memory address stored in register to MAR
-					m_mem.bus(MAR, MDR, READ);	//access memory
-					Register_file[DST] = MDR;	//load data from MDR to DST register
+					load_word();
 					Register_file[SRC] += 2;	//pre increment action
 				}
 			}
@@ -305,19 +293,10 @@ void CPU::execute()
 		else	//if either DEC or INC set
 		{
 			if (W_B > 0)	//if processing byte size data
-			{
-				MAR = Register_file[SRC];	//load memory address stored in register to MAR
-				m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
-				write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
-			}
+				load_byte();
 			else	//if processing word size data
-			{
-				MAR = Register_file[SRC];	//load memory address stored in register to MAR
-				m_mem.bus(MAR, MDR, READ);	//access memory
-				Register_file[DST] = MDR;	//load data from MDR to DST register
-			}
+				load_word();
 		}
-		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case ST:	//Opcode = 10000 (ST)
@@ -329,32 +308,24 @@ void CPU::execute()
 				if (W_B > 0)	//if processing byte size data
 				{
 					Register_file[DST] -= 1;	//pre decrement action
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+					store_byte();
 				}
 				else	//if processing word size data
 				{
 					Register_file[DST] -= 2;	//pre decrement action
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE);	//access memory
+					store_word();
 				}
 			}
 			else	//post-decrement action
 			{
 				if (W_B > 0)	//if processing byte size data
 				{
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+					store_byte();
 					Register_file[DST] -= 1;	//post decrement action
 				}
 				else	//if processing word size data
 				{
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE);	//access memory
+					store_word();
 					Register_file[DST] -= 2;	//pre decrement action
 				}
 			}
@@ -366,32 +337,24 @@ void CPU::execute()
 				if (W_B > 0)	//if processing byte size data
 				{
 					Register_file[DST] += 1;	//pre increment action
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+					store_byte();
 				}
 				else	//if processing word size data
 				{
 					Register_file[DST] += 2;	//pre increment action
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE);	//access memory
+					store_word();
 				}
 			}
 			else	//post-increment action
 			{
 				if (W_B > 0)	//if processing byte size data
 				{
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+					store_byte();
 					Register_file[DST] += 1;	//post increment action
 				}
 				else	//if processing word size data
 				{
-					MAR = Register_file[DST];	//load memory address stored in register to MAR
-					MDR = Register_file[SRC];	//store data from DST register to MDR
-					m_mem.bus(MAR, MDR, WRITE);	//access memory
+					store_word();
 					Register_file[DST] += 2;	//pre increment action
 				}
 			}
@@ -400,18 +363,13 @@ void CPU::execute()
 		{
 			if (W_B > 0)	//if processing byte size data
 			{
-				MAR = Register_file[DST];	//load memory address stored in register to MAR
-				MDR = Register_file[SRC];	//store data from DST register to MDR
-				m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+				store_byte();
 			}
 			else	//if processing word size data
 			{
-				MAR = Register_file[DST];	//load memory address stored in register to MAR
-				MDR = Register_file[SRC];	//store data from DST register to MDR
-				m_mem.bus(MAR, MDR, WRITE);	//access memory
+				store_word();
 			}
 		}
-		m_clock += 3;	//extra increment of clock for this instruction
 		break;
 	}
 	case MOVL:	//Opcode = 10010 (MOVL)
@@ -476,7 +434,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
+			char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -484,7 +442,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
+			short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -496,7 +454,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
+			char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -504,7 +462,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
+			short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -536,14 +494,14 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char) Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
+			char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -726,30 +684,25 @@ void CPU::check_interrupt()
 	std::map<unsigned char /*priority*/, unsigned char /*device number*/> dev_interrupt;
 	for (unsigned short dev_number = 0; dev_number < 8; dev_number++)	//check each device's control/status register
 	{
-		unsigned short LByte_CSR = 0;
+		unsigned short LByte_CSR = m_mem.m_memory.byte_mem[dev_number * 2];
 		unsigned short clear_dba = LByte_CSR | (~CSR_DBA);
-		m_mem.bus(dev_number *2, LByte_CSR, READ, BYTE);	//get device's CSR low byte
 		if ((LByte_CSR&CSR_DBA) > 0)	//if data need to process
 		{
 			if ((LByte_CSR&CSR_IE) > 0)	//if interrupt generated
 			{
 				//get device priority
-				unsigned short dev_psw = 0;
-				m_mem.bus(GET_DEV_VECTOR_ADDR(dev_number), dev_psw, READ);
+				unsigned char dev_psw = m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)];
 				unsigned char dev_priority = GET_PRIORITY(dev_psw);
 				dev_interrupt[dev_priority] = dev_number;//add to interrupt map
-				m_mem.bus(dev_number * 2, clear_dba, WRITE, BYTE);	//clear DBA
-
-				//??!!turn off the interrupt of this device and reopen it at the end of ISR?
+				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = clear_dba;	//clear DBA
 			}
 			if ((LByte_CSR&CSR_IO) == 0)	//if output device need to output data
 			{
-				unsigned short CSR = 0;
-				m_mem.bus(dev_number * 2, CSR, READ);	//get device's CSR
+				unsigned short CSR = m_mem.m_memory.word_mem[dev_number];	//get device's CSR
 				output_data_info info(GET_DATA(CSR), dev_number);
 				unsigned int output_time = m_clock + device_process_time[dev_number];	//get output time
 				output_list[output_time].emplace_back(info);	//add to list of output data
-				m_mem.bus(dev_number * 2, clear_dba, WRITE, BYTE);	//clear DBA
+				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = clear_dba;	//clear DBA
 			}
 		}
 	}
@@ -794,8 +747,8 @@ void CPU::check_interrupt()
 			it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
 			if (it->size() == 0)	//if the interrupt map of a time point is empty, erase this map from interrupt queue
 				interrput_queue.pop_front();
-			m_clock += 9;	//time cost by prepare for interrupt
 		}
+		//??!!turn off the interrupt of this device and reopen it at the end of ISR?
 	}
 }
 
@@ -852,24 +805,24 @@ void CPU::ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned
 	if ((DST_Data&sign_bit) == (SRC_Data&sign_bit))	//if source and destination have same sign
 	{
 		if ((DST_Data&sign_bit) != (result&sign_bit))	//if result and source have different sign
-			PSW |= GET_OVERFLOW(PSW);	//set overflow flag
+			PSW |= OVERFLOW;	//set overflow flag
 		else //clear overflow
-			PSW &= ~GET_OVERFLOW(PSW);	//clear overflow flag
+			PSW &= ~OVERFLOW;	//clear overflow flag
 	}
 	else //clear overflow
-		PSW &= ~GET_OVERFLOW(PSW);	//clear overflow flag
+		PSW &= ~OVERFLOW;	//clear overflow flag
 
 	//indicate setting negative flag
 	if ((result&sign_bit) > 0)	//if result is negative
-		PSW |= GET_NEGATIVE(PSW);	//set carry
+		PSW |= NEGATIVE;	//set carry
 	else //clear negative
-		PSW &= ~GET_NEGATIVE(PSW);	//clear negative flag
+		PSW &= ~NEGATIVE;	//clear negative flag
 
 	//indicate setting zero flag
 	if (result == 0)
-		PSW |= GET_ZERO(PSW);	//set zero
+		PSW |= ZERO;	//set zero
 	else //clear zero
-		PSW &= ~GET_ZERO(PSW);	//clear zero flag
+		PSW &= ~ZERO;	//clear zero flag
 }
 
 void CPU::push_to_stack(unsigned short data_to_push)	//push a data to stack pointer
@@ -884,4 +837,36 @@ void CPU::pull_from_stack(unsigned short& data_to_pull)
 	m_mem.bus(STACK_POINTER, MDR, READ);
 	STACK_POINTER += 2;
 	data_to_pull = MDR;
+}
+
+//load word size data to DST register
+void CPU::load_word()
+{
+	MAR = Register_file[SRC];	//load memory address stored in register to MAR
+	m_mem.bus(MAR, MDR, READ);	//access memory
+	Register_file[DST] = MDR;	//load data from MDR to DST register
+}
+
+//load byte size data to DST register
+void CPU::load_byte()
+{
+	MAR = Register_file[SRC];	//load memory address stored in register to MAR
+	m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
+	write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
+}
+
+//load word size data to DST register
+void CPU::store_word()
+{
+	MAR = Register_file[DST];	//load memory address stored in register to MAR
+	MDR = Register_file[SRC];	//store data from DST register to MDR
+	m_mem.bus(MAR, MDR, WRITE);	//access memory
+}
+
+//load byte size data to DST register
+void CPU::store_byte()
+{
+	MAR = Register_file[DST];	//load memory address stored in register to MAR
+	MDR = Register_file[SRC];	//store data from DST register to MDR
+	m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
 }

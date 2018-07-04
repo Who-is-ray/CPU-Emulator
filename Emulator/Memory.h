@@ -21,9 +21,11 @@ union memory	//memory union	??put in cpp file?
 class Memory	//memory class
 {
 public:
-	Memory(){}	//consturctor
+	Memory(unsigned int& clock) :m_clock(clock) {}	//consturctor, set reference of m_clock
 	~Memory() {}	//destructor
 	void bus(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw = WORD);	//bus function
 	union memory m_memory;	//memory union
 	void update_CSR(ACTION rw, SIZE bw, unsigned short address);	//update CSR after accessed CSR data
+private:
+	unsigned int& m_clock;	//system clock
 };

@@ -1,4 +1,4 @@
-#if 1	//real main
+#if 1	//debug
 //
 #include "Debugger.h"
 

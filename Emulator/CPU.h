@@ -48,6 +48,10 @@ private:
 	void ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit, unsigned int sign_bit);	//updat psw register
 	void push_to_stack(unsigned short data_to_push);	//push a data to stack pointer
 	void pull_from_stack(unsigned short& data_to_poll);	//pull a data from stack pointer
+	void load_word();	//load word size data to DST register
+	void load_byte();	//load byte size data to DST register
+	void store_word();	//load word size data to DST register
+	void store_byte();	//load byte size data to DST register
 
 	/*
 		queue of interrupt(s), this is the queue of maps, each map stores and sorts priority and device number of interrupt at one time point

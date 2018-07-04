@@ -55,7 +55,7 @@ void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
 	//printf("PC = %4lx\n", PROGRAM_COUNTER);	//program counter test print out
-	std::cout << "clock = " << clock << "\n";	//clock test print out
+	//std::cout << "clock = " << clock << "\n";	//clock test print out
 
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
@@ -212,7 +212,7 @@ void Debugger::run_debugger()
 {
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
 	unsigned int clock = 0;	//Initialize clock, the reason I put clock here is because clock usually are located outside CPU, such us matherboard
-	Memory mem;	//initialize memory
+	Memory mem(clock);	//initialize memory
 	CPU m_CPU(mem, clock);
 	int user_cmd=0;	//user's command
 	debugger_is_running = true;

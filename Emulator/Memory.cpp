@@ -20,6 +20,7 @@ void Memory::bus(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw)
 	}
 	if (MAR < 16)	//if accessing device SCR
 		update_CSR(rw, bw, MAR);
+	m_clock += 3;	//increment of clock for all instruction	//!!maybe need to move to bus
 }
 
 //update CSR after process with CSR.data
