@@ -1,8 +1,8 @@
 #include "Debugger.h"	//header that define debugger class
+#include "CPU.h"	//header that define CPU class
 #include <iostream>	//library for cin
 #include <fstream>	//Input/output stream class to operate on files
 #include <string>	//library for string
-#include "CPU.h"	//header that define CPU class
 #include <signal.h>	//Signal handling software
 
 #define BASE_OF_HEX	16	//base of hexdecimal
@@ -54,8 +54,8 @@ void sigint_hdlr()
 void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
-	//printf("PC = %4lx\n", PROGRAM_COUNTER);	//program counter test print out
-	//std::cout << "clock = " << clock << "\n";	//clock test print out
+	//printf("PC = %4lx\n", m_CPU.get_register_val(7));	//program counter test print out
+	std::cout << "clock = " << clock << "\n";	//clock test print out
 
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
@@ -270,6 +270,7 @@ void Debugger::run_debugger()
 		case 7:	//display data from a specific memory
 		{
 			std::string address;
+			//!!if(address>)
 			std::cout << "Type in the hex value of address of the memory to display: ";
 			std::cin >> address;
 			printf("Data in that memory is %04lx\n", mem.m_memory.word_mem[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))/2]);	//display hex decimal of the specific memory value
@@ -328,7 +329,7 @@ void Debugger::run_debugger()
 		}
 	}
 	
-	////memeory test output
+	////memeory test output!!
 	//for (size_t i = 250; i < 400; i++)
 	//{
 	//	printf("mem[%04lx]\t%02lx\n", i, mem.m_memory.byte_mem[i]);

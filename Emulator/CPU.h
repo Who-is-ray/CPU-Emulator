@@ -46,8 +46,10 @@ private:
 	short get_relative_offset();	//return relative offset value from instruction (LDR STR)
 	short get_offset();	//return offset value from instruction	(BEQ/BZ to BAL)
 	void ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit, unsigned int sign_bit);	//updat psw register
+	void ModifyStatusFlags_dec(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit);
 	void push_to_stack(unsigned short data_to_push);	//push a data to stack pointer
 	void pull_from_stack(unsigned short& data_to_poll);	//pull a data from stack pointer
+	void return_from_interrupt();	//routine after return from interrupt
 	void load_word();	//load word size data to DST register
 	void load_byte();	//load byte size data to DST register
 	void store_word();	//load word size data to DST register

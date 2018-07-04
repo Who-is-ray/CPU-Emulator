@@ -25,7 +25,7 @@
 #define	ZERO			(1<<1)		//value of psw.zero
 #define	NEGATIVE		(1<<2)		//value of psw.negative
 #define	SLP				(1<<3)		//value of psw.sleep
-#define	OVERFLOW		(1<<4)		//value of psw.overflow
+#define	OVER_FLOW		(1<<4)		//value of psw.overflow
 #define	GET_PRIORITY(x)	(unsigned char)(x&0b11100000)>>5	//value of psw.priority
 #define GET_DATA(x)		(unsigned char)(x>>8)	//get psw.data
 #define PRPO	(IR&(1<<10))	//PRPO bit of instruction bit 11
@@ -36,24 +36,31 @@
 #define	DST		(unsigned char)(IR&0b111)	//DST value from instruction bit 2 to 0
 #define SRC		(unsigned char)((IR&0b111000)>>3)	//SRC value from instruction bit 5 to 3
 #define DATA	(unsigned short)((IR&0b11111111000) >> 3)	//Data value from instruction bit 10 to 3
-#define	BRANCH_OFFSET					(IR&0b1111111111)<<1
-#define BRANCH_OFFSET_SIGN				(IR & 1<<9)
-#define BRANCH_OFFSET_SIGN_EXTENSION	0b1111100000000000
-#define BL_SIGN_EXTENSION				0b1100000000000000
-#define	RELATIVE_OFFSET					(IR & 0b1111110000000) >> 7
-#define RELATIVE_SIGN_EXTENSION			0b1111111110000000
-#define BYTE_SIGN_BIT	1<<7
-#define WORD_SIGN_BIT	1<<15
-#define BYTE_CARRY_BIT	1<<8
-#define WORD_CARRY_BIT	1<<16
+#define	BRANCH_OFFSET					(IR&0b1111111111)<<1//get value of branch offset
+#define BRANCH_OFFSET_SIGN				(IR & 1<<9)			//sign bit of branch offset
+#define BRANCH_OFFSET_SIGN_EXTENSION	0b1111100000000000	//sign extension of branch offset
+#define BL_SIGN_EXTENSION				0b1100000000000000	//BL sign extension
+#define	RELATIVE_OFFSET					(IR & 0b1111110000000) >> 7	//get the value of relative offset
+#define RELATIVE_SIGN_EXTENSION			0b1111111110000000	//sign extension of relative sign extension
+#define BYTE_SIGN_BIT	1<<7	//sign bit of byte data
+#define WORD_SIGN_BIT	1<<15	//sign bit of word data
+#define BYTE_CARRY_BIT	1<<8	//byte data carry bit
+#define WORD_CARRY_BIT	1<<16	//word data carry bit
+#define BYTE_CARRY_BIT_DEC	100
+#define WORD_CARRY_BIT_DEC	10000
 #define BIT_ONE			1
 #define BIT_SIX			1<<6
 #define BIT_SEVEN		1<<7
 #define BIT_TWELVE		1<<11
-#define BIT_FOURTEEN	1<<13
-#define BIT_FIFTEEN		1<<14
-#define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X*4)
+#define BIT_FOURTEEN	1<<14
+#define BIT_FIFTEEN		1<<15
+#define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X*4)	//get device vector address of a device
+#define GET_1ST_FOUR_BITS(X)	(X&0xf)
+#define GET_2ND_FOUR_BITS(X)	((X&0xf0)>>4)
+#define GET_3RD_FOUR_BITS(X)	((X&0xf00)>>8)
+#define GET_4TH_FOUR_BITS(X)	((X&0xf000)>>12)
 
+//enum of opcode
 enum Opcode
 {
 	BL,			LDR=6,		STR,		BEQ_BZ,		BNE_BNZ,
@@ -68,6 +75,9 @@ enum Opcode
 
 int opcode;	//opcode for decoding and executing
 std::ofstream fout;	//device output file
+
+int hex_to_dec(unsigned short data);
+unsigned short dec_to_hex(int data);
 
 /*
 	constructor
@@ -84,16 +94,35 @@ void CPU::fetch()
 {
 	if (PROGRAM_COUNTER == INVAILD_PC)	//if program counter is invaild, return from interrupt
 	{
-		if (interrput_queue.size() > 0)	//if there is pending interrupt at the end of last interrupt, process the latest interrupt	!!not sure is it correct
+		if (interrput_queue.size() > 0)	//if there is pending interrupt at the end of last interrupt, process the earilest interrupt
 		{
+			//get the base routine's priority, which is store in the stack frame
+			m_mem.bus(STACK_POINTER + 2, MDR, READ, BYTE);
+			unsigned short base_priority = MDR;
 
+			std::deque<std::map<unsigned char /*priority*/, unsigned char /*device number*/>>::iterator it = interrput_queue.begin();	//get the earliest interrupt map in the queue
+			unsigned char dev_priority = it->rbegin()->first;	//get interrupt's priority
+
+			if (dev_priority > base_priority)	//if interrupt has higher priority than return routine
+			{
+				unsigned char dev_num = it->rbegin()->second;
+				//the handler's PSW becomes the current PSW
+				m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
+				PSW = MDR;
+
+				//PC points to ISR
+				m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num) + 2, MDR, READ);
+				PROGRAM_COUNTER = MDR;
+
+				it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
+				if (it->size() == 0)	//if the interrupt map of a time point is empty, erase this map from interrupt queue
+					interrput_queue.pop_front();
+			}
+			else
+				return_from_interrupt();
 		}
 		else	//there is no more pending interrupt
-		{
-			pull_from_stack(LINK_REGISTER);	//pull LR
-			pull_from_stack(PSW);	//pull PSW
-			pull_from_stack(PROGRAM_COUNTER);	//pull PC
-		}
+			return_from_interrupt();
 	}
 
 	//if program counter is vaild
@@ -374,7 +403,7 @@ void CPU::execute()
 	}
 	case MOVL:	//Opcode = 10010 (MOVL)
 	{
-		write_byte_to_dst(Register_file[DST], DATA);	//load data to destination register low byte
+		write_byte_to_dst(Register_file[DST], (unsigned char)DATA);	//load data to destination register low byte
 		break;
 	}
 	case MOVLZ:	//Opcode = 10011 (MOVLZ)
@@ -394,7 +423,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2;	//add data1 +data2 to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT,BYTE_SIGN_BIT);	//update psw register
@@ -402,7 +431,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2;	//add data1 +data2 to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -414,7 +443,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -422,7 +451,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -434,7 +463,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
+			char data2 = ~((unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -442,7 +471,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
+			short data2 = ~(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -454,7 +483,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
+			char data2 = ~((unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -462,30 +491,30 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
+			short data2 = ~(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
 		break;
 	}
-	case DADD:	//Opcode = 0110 1000 (DADD)	!!need to change
+	case DADD:	//Opcode = 0110 1000 (DADD)
 	{
 		if (W_B > 0)	//if processing byte size data
 		{
-			unsigned char data1 = (unsigned char) Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned int data1 = hex_to_dec(Register_file[DST]);	//get data from reigister[DST]
+			unsigned int data2 = hex_to_dec(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
-			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
-			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
+			write_byte_to_dst(Register_file[DST], (unsigned char)dec_to_hex(result));	//load result to register
+			ModifyStatusFlags_dec(result, data1, data2, BYTE_CARRY_BIT_DEC);	//update psw register
 		}
 		else	//if processing word size data
 		{
-			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned int data1 = hex_to_dec(Register_file[DST]);	//get data from reigister[DST]
+			unsigned int data2 = hex_to_dec(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + (GET_CARRY(PSW) > 0 ? 1 : 0);	//add data1 +data2 to result, and add carry to result
-			Register_file[DST] = (unsigned short)result;	//load result to register
-			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
+			Register_file[DST] = dec_to_hex(result);	//load result to register
+			ModifyStatusFlags_dec(result, data1, data2, WORD_CARRY_BIT_DEC);	//update psw register
 		}
 		break;
 	}
@@ -494,14 +523,14 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char) Register_file[DST];	//get data from reigister[DST]
-			char data2 = ~((unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
+			char data2 = ~((unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]));	//get negative data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			short data2 = ~(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			short data2 = ~(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = data1 + data2 + 1;	//add data1 + data2 + 1 to result
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -512,16 +541,16 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
-			unsigned int result = (data1 & ~data2) + (data2 & ~data1);	//do XOR operation
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned int result = (data1 & ~data2) | (data2 & ~data1);	//do XOR operation
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
-			unsigned int result = (data1 & ~data2) + (data2 & ~data1);	//do XOR operation
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned int result = (data1 & ~data2) | (data2 & ~data1);	//do XOR operation
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -532,7 +561,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 & data2);	//do AND operation
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -540,7 +569,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 & data2);	//do AND operation
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -552,14 +581,14 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 & data2);	//do BIT operation
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
 		}
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 & data2);	//do BIT operation
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
 		}
@@ -572,14 +601,14 @@ void CPU::execute()
 		{
 			unsigned short LSByte = Register_file[DST] & LOWER_BYTE;	//get lowbyte of destination register
 			Register_file[DST] &= HIGHER_BYTE;	//clear loybyte of destination register
-			LSByte >> 1;	//shift right one bit
-			LSByte |= (Register_file[DST] & BIT_SIX) > 1 ? BIT_SEVEN : 0;	//set msb if have sign
+			LSByte = LSByte >> 1;	//shift right one bit
+			LSByte |= (Register_file[DST] & BIT_SIX) > 0 ? BIT_SEVEN : 0;	//set msb if have sign
 			Register_file[DST] |= LSByte;	//store back to register
 		}
 		else	//if processing word size data
 		{
 			Register_file[DST] = Register_file[DST] >> 1;	//shift right one bit
-			Register_file[DST] |= (Register_file[DST] & BIT_FOURTEEN) > 1 ? BIT_FIFTEEN : 0;	//set msb if have sign
+			Register_file[DST] |= (Register_file[DST] & BIT_FOURTEEN) > 0 ? BIT_FIFTEEN : 0;	//set msb if have sign
 		}
 		break;
 	}
@@ -588,7 +617,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 & ~data2);	//do BIT operation
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -596,7 +625,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 & ~data2);	//do BIT operation
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -606,19 +635,19 @@ void CPU::execute()
 	case RRC:	//Opcode = 0111 0011 (RRC)
 	{
 		unsigned char carry = GET_CARRY(PSW);
-		PSW |= (Register_file[DST] & BIT_ONE) > 0 ? 1 : 0;	//set lsb to carry
+		(Register_file[DST] & BIT_ONE) > 0 ? PSW |= 1 : PSW &= ~1;	//set lsb to carry
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned short LSByte = Register_file[DST] & LOWER_BYTE;	//get lowbyte of destination register
 			Register_file[DST] &= HIGHER_BYTE;	//clear loybyte of destination register
-			LSByte >> 1;	//shift right one bit
-			LSByte |= carry > 1 ? BIT_SEVEN : 0;	//set msb if have sign
+			LSByte = LSByte >> 1;	//shift right one bit
+			LSByte |= carry > 0 ? BIT_SEVEN : 0;	//set msb if have sign
 			Register_file[DST] |= LSByte;	//store back to register
 		}
 		else	//if processing word size data
 		{
 			Register_file[DST] = Register_file[DST] >> 1;	//shift right one bit
-			Register_file[DST] |= carry > 1 ? BIT_FIFTEEN : 0;	//set msb if have sign
+			Register_file[DST] |= carry > 0 ? BIT_FIFTEEN : 0;	//set msb if have sign
 		}
 		break;
 	}
@@ -627,7 +656,7 @@ void CPU::execute()
 		if (W_B > 0)	//if processing byte size data
 		{
 			unsigned char data1 = (unsigned char)Register_file[DST];	//get data from reigister[DST]
-			unsigned char data2 = (unsigned char)(R_C > 1 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
+			unsigned char data2 = (unsigned char)(R_C > 0 ? const_table[SRC] : Register_file[SRC]);	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 | data2);	//do AND operation
 			write_byte_to_dst(Register_file[DST], (unsigned char)result);	//load result to register
 			ModifyStatusFlags(result, data1, data2, BYTE_CARRY_BIT, BYTE_SIGN_BIT);	//update psw register
@@ -635,7 +664,7 @@ void CPU::execute()
 		else	//if processing word size data
 		{
 			unsigned short data1 = Register_file[DST];	//get data from reigister[DST]
-			unsigned short data2 = R_C > 1 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
+			unsigned short data2 = R_C > 0 ? const_table[SRC] : Register_file[SRC];	//get data from const table [SRC] or register[SRC]
 			unsigned int result = (data1 | data2);	//do AND operation
 			Register_file[DST] = (unsigned short)result;	//load result to register
 			ModifyStatusFlags(result, data1, data2, WORD_CARRY_BIT, WORD_SIGN_BIT);	//update psw register
@@ -682,7 +711,7 @@ void CPU::check_interrupt()
 {
 	//check pending interrupt(s) and add to interrupt queue
 	std::map<unsigned char /*priority*/, unsigned char /*device number*/> dev_interrupt;
-	for (unsigned short dev_number = 0; dev_number < 8; dev_number++)	//check each device's control/status register
+	for (unsigned char dev_number = 0; dev_number < 8; dev_number++)	//check each device's control/status register
 	{
 		unsigned short LByte_CSR = m_mem.m_memory.byte_mem[dev_number * 2];
 		unsigned short clear_dba = LByte_CSR | (~CSR_DBA);
@@ -694,7 +723,7 @@ void CPU::check_interrupt()
 				unsigned char dev_psw = m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)];
 				unsigned char dev_priority = GET_PRIORITY(dev_psw);
 				dev_interrupt[dev_priority] = dev_number;//add to interrupt map
-				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = clear_dba;	//clear DBA
+				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = (unsigned char)clear_dba;	//clear DBA
 			}
 			if ((LByte_CSR&CSR_IO) == 0)	//if output device need to output data
 			{
@@ -702,7 +731,7 @@ void CPU::check_interrupt()
 				output_data_info info(GET_DATA(CSR), dev_number);
 				unsigned int output_time = m_clock + device_process_time[dev_number];	//get output time
 				output_list[output_time].emplace_back(info);	//add to list of output data
-				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = clear_dba;	//clear DBA
+				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = (unsigned char)clear_dba;	//clear DBA
 			}
 		}
 	}
@@ -785,11 +814,7 @@ short CPU::get_offset()
 	return offset;
 }
 
-/*
-	updat psw register
-	result - result to check status flags
-
-*/
+//update psw register
 void CPU::ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit, unsigned int sign_bit)
 {
 	//indicate setting carry flag
@@ -805,18 +830,40 @@ void CPU::ModifyStatusFlags(unsigned int result, unsigned int DST_Data, unsigned
 	if ((DST_Data&sign_bit) == (SRC_Data&sign_bit))	//if source and destination have same sign
 	{
 		if ((DST_Data&sign_bit) != (result&sign_bit))	//if result and source have different sign
-			PSW |= OVERFLOW;	//set overflow flag
+			PSW |= OVER_FLOW;	//set overflow flag
 		else //clear overflow
-			PSW &= ~OVERFLOW;	//clear overflow flag
+			PSW &= ~OVER_FLOW;	//clear overflow flag
 	}
 	else //clear overflow
-		PSW &= ~OVERFLOW;	//clear overflow flag
+		PSW &= ~OVER_FLOW;	//clear overflow flag
 
 	//indicate setting negative flag
 	if ((result&sign_bit) > 0)	//if result is negative
 		PSW |= NEGATIVE;	//set carry
 	else //clear negative
 		PSW &= ~NEGATIVE;	//clear negative flag
+
+	//indicate setting zero flag
+	if (result == 0)
+		PSW |= ZERO;	//set zero
+	else //clear zero
+		PSW &= ~ZERO;	//clear zero flag
+}
+
+//update psw register
+void CPU::ModifyStatusFlags_dec(unsigned int result, unsigned int DST_Data, unsigned int SRC_Data, unsigned int carry_bit)
+{
+	//indicate setting carry flag
+	if ((result/ carry_bit) > 0)	//if bit 5 large than 0, so has carry
+	{
+		PSW |= CARRY;	//set carry
+		result -= carry_bit;	//unset carry bit from zero checking
+	}
+	else	//if no carry
+		PSW &= ~CARRY;	//clear carry
+
+	PSW &= ~OVER_FLOW;	//clear overflow flag
+	PSW &= ~NEGATIVE;	//clear negative flag
 
 	//indicate setting zero flag
 	if (result == 0)
@@ -837,6 +884,16 @@ void CPU::pull_from_stack(unsigned short& data_to_pull)
 	m_mem.bus(STACK_POINTER, MDR, READ);
 	STACK_POINTER += 2;
 	data_to_pull = MDR;
+}
+
+
+
+//routine after return from interrupt
+void CPU::return_from_interrupt()
+{
+	pull_from_stack(LINK_REGISTER);	//pull LR
+	pull_from_stack(PSW);	//pull PSW
+	pull_from_stack(PROGRAM_COUNTER);	//pull PC
 }
 
 //load word size data to DST register
@@ -869,4 +926,18 @@ void CPU::store_byte()
 	MAR = Register_file[DST];	//load memory address stored in register to MAR
 	MDR = Register_file[SRC];	//store data from DST register to MDR
 	m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+}
+
+int hex_to_dec(unsigned short data)
+{
+	return GET_1ST_FOUR_BITS(data) + GET_2ND_FOUR_BITS(data) * 10 + GET_3RD_FOUR_BITS(data) * 100 + GET_4TH_FOUR_BITS(data) * 1000;
+}
+
+unsigned short dec_to_hex(int data)
+{
+	int result_1 = data % 10;
+	int result_10 = (data / 10) % 10;
+	int result_100 = (data / 100) % 10;
+	int result_1000 = (data / 1000) % 10;
+	return (unsigned short)(result_1 + (result_10 << 4) + (result_100 << 8) + (result_1000 << 12));
 }

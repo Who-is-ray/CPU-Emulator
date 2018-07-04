@@ -1,3 +1,3 @@
 TAIL	equ	#$0600
 org	#$500
-addc R1,R2
+sxt R0

@@ -3,7 +3,7 @@ X-Makina Assembler - Version 1.18 (27 June 2018)
 
   1	    	     	TAIL	equ	#$0600
   2	    	     	org	#$500
-  3	0500	620A	addc R1,R2
+  3	0500	7700	sxt R0
 Successful completion of assembly
 
 ** Symbol table **
