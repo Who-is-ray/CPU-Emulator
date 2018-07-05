@@ -1,3 +1,0 @@
-TAIL	equ	#$0600
-org	#$500
-sxt R0

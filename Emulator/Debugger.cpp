@@ -30,8 +30,8 @@ int help_func()
 		<< " 9: Update a data from a memory\n"
 		<< "10: Update a data from a register\n"
 		<< "11: Run CPU\n"
-		<< "12: Exit"
-		<<"\nChoose a command, type the number of command:	";
+		<< "12: Exit\n"
+		<<"Choose a command, type the number of command:	";
 	std::cin >> user_cmd;
 	return user_cmd;
 }
@@ -54,8 +54,8 @@ void sigint_hdlr()
 void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
-	//printf("PC = %4lx\n", m_CPU.get_register_val(7));	//program counter test print out
-	std::cout << "clock = " << clock << "\n";	//clock test print out
+	//printf("PC = %4lx\n", m_CPU.get_register_val(7));	//program counter test print out	!!
+	//std::cout << "clock = " << clock << "\n";	//clock test print out
 
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{

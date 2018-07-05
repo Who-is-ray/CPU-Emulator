@@ -714,7 +714,7 @@ void CPU::check_interrupt()
 	for (unsigned char dev_number = 0; dev_number < 8; dev_number++)	//check each device's control/status register
 	{
 		unsigned short LByte_CSR = m_mem.m_memory.byte_mem[dev_number * 2];
-		unsigned short clear_dba = LByte_CSR | (~CSR_DBA);
+		unsigned short clear_dba = LByte_CSR & (~CSR_DBA);
 		if ((LByte_CSR&CSR_DBA) > 0)	//if data need to process
 		{
 			if ((LByte_CSR&CSR_IE) > 0)	//if interrupt generated
@@ -723,7 +723,7 @@ void CPU::check_interrupt()
 				unsigned char dev_psw = m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)];
 				unsigned char dev_priority = GET_PRIORITY(dev_psw);
 				dev_interrupt[dev_priority] = dev_number;//add to interrupt map
-				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = (unsigned char)clear_dba;	//clear DBA
+				m_mem.m_memory.byte_mem[dev_number * 2] = (unsigned char)clear_dba;	//clear DBA
 			}
 			if ((LByte_CSR&CSR_IO) == 0)	//if output device need to output data
 			{
@@ -731,7 +731,7 @@ void CPU::check_interrupt()
 				output_data_info info(GET_DATA(CSR), dev_number);
 				unsigned int output_time = m_clock + device_process_time[dev_number];	//get output time
 				output_list[output_time].emplace_back(info);	//add to list of output data
-				m_mem.m_memory.byte_mem[GET_DEV_VECTOR_ADDR(dev_number)] = (unsigned char)clear_dba;	//clear DBA
+				m_mem.m_memory.byte_mem[dev_number * 2] = (unsigned char)clear_dba;	//clear DBA
 			}
 		}
 	}
@@ -773,11 +773,13 @@ void CPU::check_interrupt()
 
 			LINK_REGISTER = 0xffff;	//set LR to #$ffff
 
+			//unsigned short clear_ie = m_mem.m_memory.byte_mem[dev_num * 2] & (~CSR_IE);	//!!
+			//m_mem.m_memory.byte_mem[dev_num * 2] = (unsigned char)clear_ie;	//!!clear IE, so when this device handling interrupt, it no longer received data
+
 			it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
 			if (it->size() == 0)	//if the interrupt map of a time point is empty, erase this map from interrupt queue
 				interrput_queue.pop_front();
 		}
-		//??!!turn off the interrupt of this device and reopen it at the end of ISR?
 	}
 }
 

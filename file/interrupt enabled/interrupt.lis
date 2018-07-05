@@ -1,0 +1,97 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: interrupt.asm
+
+  1	    	     		dev0 		equ #$0000
+  2	    	     		dev0_psw	equ #$0060	;priority of device 0 is 3, IE is set
+  3	    	     		dev0_vec	equ	#$FFC0
+  4	    	     		isr0_addr	equ #$FFC2	;address of ISR0
+  5	    	     		dev4		equ #$0008
+  6	    	     		dev4_psw	equ #$0080	;priority of device 1 is 4, IE is unset
+  7	    	     		dev4_vec	equ #$FFD0
+  8	    	     		isr4_addr	equ #$FFD2	;address of ISR2
+  9	    	     		comp_psw	equ	#$0020	;priority of computer is 1
+ 10	    	     		PSW			equ	R6		;PSW is alias of R6
+ 11	    	     		LR			equ	R4	; LR is alias of R4
+ 12	    	     		SP			equ	R5	; SP is alias of R5 
+ 13	    	     		PC			equ	R7	; PC is alias of R7
+ 14	    	     		STKTOP		equ	#$FFBE	; Top-of-stack - word below device vectors
+ 15	    	     		org	#$500
+ 16	    	     	
+ 17	0500	9106		movl comp_psw,PSW		;set computer priority equal to 1
+ 18	    	     		
+ 19	    	     		; Initialize stack point
+ 20	0502	95F5		movl	STKTOP,SP	; LSB to SP
+ 21	0504	A7FD		movh	STKTOP,SP	; MSB to SP
+ 22	    	     		
+ 23	    	     		;set device 0 priority equal to 3
+ 24	0506	9600		movl dev0_vec,R0		
+ 25	0508	A7F8		movh dev0_vec,R0
+ 26	050A	9301		movl dev0_psw,R1
+ 27	050C	A001		movh dev0_psw,R1
+ 28	050E	8808		st	R1,R0
+ 29	    	     		
+ 30	    	     		;set device 4 priority equal to 4
+ 31	0510	9680		movl dev4_vec,R0		
+ 32	0512	A7F8		movh dev4_vec,R0
+ 33	0514	9401		movl dev4_psw,R1
+ 34	0516	A001		movh dev4_psw,R1
+ 35	0518	8808		st	R1,R0
+ 36	    	     		
+ 37	    	     		;set device0's ISR address	
+ 38	051A	9610		movl isr0_addr,R0		
+ 39	051C	A7F8		movh isr0_addr,R0
+ 40	051E	9001		movl isr0,R1
+ 41	0520	A101		movh isr0,R1
+ 42	0522	8808		st	R1,R0
+ 43	    	     		
+ 44	    	     		;turn on the PSW.IE of device 1
+ 45	0524	9000		movl dev0,R0		
+ 46	0526	A000		movh dev0,R0
+ 47	0528	8001		ld R0,R1
+ 48	052A	6089		add #1,R1
+ 49	052C	8808		st R1,R0
+ 50	    	     		
+ 51	    	     	wait
+ 52	052E	3FFF		bal wait
+ 53	    	     		
+ 54	    	     		org #$2000
+ 55	    	     	isr0
+ 56	2000	9000		movl dev0,R0		;set device 1 address
+ 57	2002	A000		movh dev0,R0
+ 58	2004	9041		movl dev4,R1		;set device 4 address
+ 59	2006	A001		movh dev4,R1
+ 60	2008	8002		ld	R0,R2
+ 61	200A	804A		ld.b R1,R2
+ 62	200C	8811		st	R2,R1			;load data in dev0 to dev 4
+ 63	200E	7627		mov LR,PC
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+wait                               	LBL	052E	1326
+isr0                               	LBL	2000	8192
+STKTOP                             	LBL	FFBE	-66
+PC                                 	REG	0007	7
+SP                                 	REG	0005	5
+LR                                 	REG	0004	4
+PSW                                	REG	0006	6
+comp_psw                           	LBL	0020	32
+isr4_addr                          	LBL	FFD2	-46
+dev4_vec                           	LBL	FFD0	-48
+dev4_psw                           	LBL	0080	128
+dev4                               	LBL	0008	8
+isr0_addr                          	LBL	FFC2	-62
+dev0_vec                           	LBL	FFC0	-64
+dev0_psw                           	LBL	0060	96
+dev0                               	LBL	0000	0
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\Emulator\file\interrupt.xme
+

@@ -1,0 +1,70 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: H:\Repos\Emulator\Emulator\n.txt
+
+  1	    	     		dev0_vec	equ	#$FFC0	;address of device 0 vector
+  2	    	     		isr0_addr	equ #$FFC2	;address of ISR0
+  3	    	     		dev4_vec	equ #$FFD0	;address of device 4 vector
+  4	    	     		isr4_addr	equ #$FFD2	;address of ISR2
+  5	    	     		comp_psw	equ	#$0020	;priority of computer is 1
+  6	    	     		dev0_psw	equ #$0061	;priority of device 0 is 3, IE is set
+  7	    	     		dev4_psw	equ #$0080	;priority of device 1 is 4, IE is unset
+  8	    	     		PSW			equ	R6		;PSW is alias of R6
+  9	    	     	
+ 10	    	     		org	#$500
+ 11	    	     	
+ 12	    	     		movl comp_psw,PSW		;set computer priority equal to 1
+ 13	    	     		
+ 14	    	     		movl dev0_vec,R0		;set device 0 priority equal to 3
+ 15	    	     		movh dev0_vec,R0
+ 16	    	     		movl dev0_psw,R1
+ 17	    	     		movh dev0_psw,R1
+ 18	    	     		st	R1,R0
+ 19	    	     		
+ 20	    	     		movl dev4_vec,R0		;set device 4 priority equal to 4
+ 21	    	     		movh dev4_vec,R0
+ 22	    	     		movl dev4_psw,R1
+ 23	    	     		movh dev4_psw,R1
+ 24	    	     		st	R1,R0
+ 25	    	     			
+ 26	    	     		movl isr0_addr,R0		;set device 4 priority equal to 4
+ 27	    	     		movh isr0_addr,R0
+ 28	    	     		movl isr0,R1
+ 29	    	     		movh isr0,R1
+ 30	    	     		st	R1,R0
+ 31	    	     		
+ 32	    	     	wait
+ 33	    	     		bal wait
+ 34	    	     		
+ 35	    	     		org #$2000
+ 36	    	     	isr0
+ 37	    	     		movl dev0_vec,R0		;set device 1 address
+ 38	    	     		movh dev0_vec,R0
+ 39	    	     		movl dev4_vec,R1		;set device 4 address
+ 40	    	     		movh dev4_vec,R1
+ 41	    	     		ld	R0,R2
+ 42	    	     		swpb	R2
+ 43	    	     		st.b	+R1,R2			;load data in dev0 to dev 4
+			**** Invalid register: +R1
+ 44	    	     		
+First pass errors - assembly terminated
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+wait                               	LBL	0520	1312
+isr0                               	LBL	2000	8192
+PSW                                	REG	0006	6
+dev4_psw                           	LBL	0080	128
+dev0_psw                           	LBL	0061	97
+comp_psw                           	LBL	0020	32
+isr4_addr                          	LBL	FFD2	-46
+dev4_vec                           	LBL	FFD0	-48
+isr0_addr                          	LBL	FFC2	-62
+dev0_vec                           	LBL	FFC0	-64
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
