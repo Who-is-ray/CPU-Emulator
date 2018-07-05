@@ -1,10 +1,10 @@
 #pragma once
 
-#define SIZE_OF_BYTE_MEMORY	1<<16	//size of byte memory array
-#define	SIZE_OF_WORD_MEMORY 1<<15	//size of word memory array
-#define CSR_OF	1<<3	//control/status register bit Overrun
-#define CSR_DBA	1<<2	//control/status register bit DBA
-#define CSR_IO	1<<1	//control/status register bit I/O
+#define SIZE_OF_BYTE_MEMORY	(1<<16)	//size of byte memory array
+#define	SIZE_OF_WORD_MEMORY (1<<15)	//size of word memory array
+#define CSR_OF	(1<<3)	//control/status register bit Overrun
+#define CSR_DBA	(1<<2)	//control/status register bit DBA
+#define CSR_IO	(1<<1)	//control/status register bit I/O
 #define CSR_IE	1		//control/status register bit IE
 #define CSR_SET_INPUT 2	//value to set CSR input
 #define CSR_SET_OUTPUT 0	//value to set CSR output

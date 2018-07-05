@@ -33,4 +33,11 @@ void Memory::update_CSR(ACTION rw, SIZE bw, unsigned short address)
 		else if ((m_memory.byte_mem[address] & CSR_IO) == 0 && rw == WRITE)	//if writing to output device's control/status register
 			m_memory.byte_mem[address] |= (m_memory.byte_mem[address] & CSR_DBA) > 0 ? CSR_OF : CSR_DBA;	//set DBA, set OF if DBA was set
 	}
+	else if (address & 1)
+	{
+		if ((m_memory.byte_mem[address-1] & CSR_IO) > 0 && rw == READ)	//if reading from input device's control/status register
+			m_memory.byte_mem[address-1] &= ~(CSR_DBA | CSR_OF);	//clear OF and DBA
+		else if ((m_memory.byte_mem[address-1] & CSR_IO) == 0 && rw == WRITE)	//if writing to output device's control/status register
+			m_memory.byte_mem[address-1] |= (m_memory.byte_mem[address-1] & CSR_DBA) > 0 ? CSR_OF : CSR_DBA;	//set DBA, set OF if DBA was set
+	}
 }

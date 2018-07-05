@@ -12,33 +12,34 @@ X-Makina Assembler - Version 1.18 (27 June 2018)
   9	    	     	CAP_A	equ	#'A'
  10	    	     	CAP_Z	equ	#'Z'
  11	    	     	; Start of data area
- 12	    	     		org	#0
- 13	0000	0000	Base	bss	SIZE		; Reserve SIZE bytes
+ 12	    	     		org	#$1000
+ 13	1000	0000	Base	bss	SIZE		; Reserve SIZE bytes
  14	    	     	; Start of code area
  15	    	     		org	#$100
  16	0100	9A08	Start	movlz	CAP_A,R0	; R0 = 'A'
  17	0102	9AD1		movlz	CAP_Z,R1		; R1 = 'Z'
  18	0104	9802		movlz	Base,R2		; R2 = Base (Base address for characters
- 19	    	     	; 
- 20	    	     	Loop
- 21	0106	8942		st.b	R0,R2+		; [R2] = R0; R2 = R2 + 1
- 22	0108	6A41		cmp.b	R0,R1		; R0 = R1 ('Z')
- 23	010A	2002		beq	Done		; Yes: Goto Done
- 24	010C	60C8		add.b	#1,R0		; No: R0 = R0 + 1 (next ASCII char)
- 25	010E	3FFB		bal	Loop		; Repeat loop
- 26	    	     	; End of program
- 27	0110	3FFF	Done	bal	Done		; Infinite loop to "stop" the program
- 28	    	     	;
- 29	    	     	;	end	Start		; End of program - first executable address is "Start"
+ 19	0106	A082		movh	Base,R2
+ 20	    	     		; 
+ 21	    	     	Loop
+ 22	0108	8942		st.b	R0,R2+		; [R2] = R0; R2 = R2 + 1
+ 23	010A	6A41		cmp.b	R0,R1		; R0 = R1 ('Z')
+ 24	010C	2002		beq	Done		; Yes: Goto Done
+ 25	010E	60C8		add.b	#1,R0		; No: R0 = R0 + 1 (next ASCII char)
+ 26	0110	3FFB		bal	Loop		; Repeat loop
+ 27	    	     	; End of program
+ 28	0112	3FFF	Done	bal	Done		; Infinite loop to "stop" the program
+ 29	    	     	;
+ 30	    	     		end	Start		; End of program - first executable address is "Start"
 
 Successful completion of assembly
 
 ** Symbol table **
 Name                               	Type	Value	Decimal
-Done                               	LBL	0110	272
-Loop                               	LBL	0106	262
+Done                               	LBL	0112	274
+Loop                               	LBL	0108	264
 Start                              	LBL	0100	256
-Base                               	LBL	0000	0
+Base                               	LBL	1000	4096
 CAP_Z                              	LBL	005A	90
 CAP_A                              	LBL	0041	65
 SIZE                               	LBL	001A	26
@@ -51,5 +52,5 @@ R2                                 	REG	0002	2
 R1                                 	REG	0001	1
 R0                                 	REG	0000	0
 
-.XME file: H:\Repos\Emulator\Emulator\ArrayInit.xme
+.XME file: D:\Repos\emulator\file\ArrayInit.xme
 
