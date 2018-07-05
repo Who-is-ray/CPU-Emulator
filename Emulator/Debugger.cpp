@@ -25,9 +25,9 @@ int help_func()
 		<< " 4: Delete a Program Counter break point\n"
 		<< " 5: Display clock limit\n"
 		<< " 6: Display all break point(s)\n"
-		<< " 7: Display a data from a memory\n"
-		<< " 8: Display a data from a register\n"
-		<< " 9: Update a data from a memory\n"
+		<< " 7: Display a range of data from a memory\n"
+		<< " 8: Display register\n"
+		<< " 9: Update data from a memory\n"
 		<< "10: Update a data from a register\n"
 		<< "11: Run CPU\n"
 		<< "12: Exit\n"
@@ -43,7 +43,7 @@ int help_func()
 */
 void sigint_hdlr()
 {
-	cpu_is_running = false;
+	cpu_is_running = false;	//pause CPU's running
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr); /* Reinitialize SIGINT */
 }
 
@@ -269,19 +269,20 @@ void Debugger::run_debugger()
 		}
 		case 7:	//display data from a specific memory
 		{
-			std::string address;
+			std::string start_address, end_address;
 			//!!if(address>)
-			std::cout << "Type in the hex value of address of the memory to display: ";
-			std::cin >> address;
-			printf("Data in that memory is %04lx\n", mem.m_memory.word_mem[static_cast<unsigned short>(strtol(address.c_str(), NULL, BASE_OF_HEX))/2]);	//display hex decimal of the specific memory value
+			std::cout << "Type in the hex value of starting address of the memory to display: ";
+			std::cin >> start_address;
+			std::cout << "Type in the hex value of ending address of the memory to display: ";
+			std::cin >> end_address;
+			for (int i = strtol(start_address.c_str(), NULL, BASE_OF_HEX); i <= strtol(end_address.c_str(), NULL, BASE_OF_HEX); i += 2)
+				printf("Data in memory[%04lx] is %04lx\n", i, mem.m_memory.word_mem[static_cast<unsigned short>(i) >> 1]);	//display hex decimal of the specific memory value
 			break;
 		}
-		case 8:	//display data from a specific register
+		case 8:	//display register
 		{
-			int address;
-			std::cout << "Type in the address (0-7) of the register to display: ";
-			std::cin >> address;
-			printf("Data in that register is %04lx\n", m_CPU.get_register_val(address));	//display hex decimal of the specific register value
+			for (int i = 0; i < 8; i++)
+				printf("register[%d] = %04lx\n", i, m_CPU.get_register_val(i));	//display hex decimal of the specific register value
 			break;
 		}
 		case 9:	//Update a data from a memory
