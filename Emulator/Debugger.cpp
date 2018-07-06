@@ -17,22 +17,30 @@ bool debugger_is_running;	//flag that indicate whether debugger should keep runn
 int help_func()
 {
 	int user_cmd;	//user's command
-	std::cout << "\nCommand list:\n"
-		<< " 0: Load device file\n"
-		<< " 1: Load S-Record file\n"
-		<< " 2: Add a Program Counter break point\n"
-		<< " 3: Set clock limit\n"
-		<< " 4: Delete a Program Counter break point\n"
-		<< " 5: Display clock limit\n"
-		<< " 6: Display all break point(s)\n"
-		<< " 7: Display a range of data from a memory\n"
-		<< " 8: Display register\n"
-		<< " 9: Update data from a memory\n"
-		<< "10: Update a data from a register\n"
-		<< "11: Run CPU\n"
-		<< "12: Exit\n"
-		<<"Choose a command, type the number of command:	";
-	std::cin >> user_cmd;
+	bool wait_for_cmd = true;
+	while (wait_for_cmd)	//waiting for user's command
+	{
+		std::cout << "\nCommand list:\n"
+			<< " 0: Load device file\n"
+			<< " 1: Load S-Record file\n"
+			<< " 2: Add a Program Counter break point\n"
+			<< " 3: Set clock limit\n"
+			<< " 4: Delete a Program Counter break point\n"
+			<< " 5: Display clock limit\n"
+			<< " 6: Display all break point(s)\n"
+			<< " 7: Display a range of data from a memory\n"
+			<< " 8: Display register\n"
+			<< " 9: Update data from a memory\n"
+			<< "10: Update a data from a register\n"
+			<< "11: Run CPU\n"
+			<< "12: Exit\n"
+			<< "Choose a command, type the number of command:	";
+		std::cin >> user_cmd;
+		if (user_cmd >= 0 && user_cmd < 13)	//if has vaild command
+			wait_for_cmd = false;	//stop waiting command
+		else
+			std::cout << "Wrong command, input again!\n";
+	}
 	return user_cmd;
 }
 
@@ -60,7 +68,7 @@ void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
 		cpu_is_running = false;
-		printf("Catched break point %4lx\n", PC);
+		printf("Catched break point %4lx (clock = %d)\n", PC, clock);
 	}
 
 	if (clock>=clock_limit)	//if reached clock limit
@@ -270,13 +278,19 @@ void Debugger::run_debugger()
 		case 7:	//display data from a specific memory
 		{
 			std::string start_address, end_address;
-			//!!if(address>)
 			std::cout << "Type in the hex value of starting address of the memory to display: ";
 			std::cin >> start_address;
 			std::cout << "Type in the hex value of ending address of the memory to display: ";
 			std::cin >> end_address;
-			for (int i = strtol(start_address.c_str(), NULL, BASE_OF_HEX); i <= strtol(end_address.c_str(), NULL, BASE_OF_HEX); i += 2)
-				printf("Data in memory[%04lx] is %04lx\n", i, mem.m_memory.word_mem[static_cast<unsigned short>(i) >> 1]);	//display hex decimal of the specific memory value
+			int start = strtol(start_address.c_str(), NULL, BASE_OF_HEX);
+			int end = strtol(end_address.c_str(), NULL, BASE_OF_HEX);
+			if (start >= 0 && end >= start && end < SIZE_OF_BYTE_MEMORY)	//if start and end address is vaild
+			{
+				for (int i = start; i <= end; i += 2)
+					printf("Data in memory[%04lx] is %04lx\n", i, mem.m_memory.word_mem[static_cast<unsigned short>(i) >> 1]);	//display hex decimal of the specific memory
+			}
+			else	//if address is not correct
+				std::cout << "Input addresses are not vaild! Try again!\n";
 			break;
 		}
 		case 8:	//display register
