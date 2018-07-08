@@ -5,10 +5,12 @@
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Cache_Memory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Debugger.h" />
     <ClInclude Include="CPU.h" />
     <ClInclude Include="Memory.h" />
+    <ClInclude Include="Cache_Memory.h" />
   </ItemGroup>
 </Project>

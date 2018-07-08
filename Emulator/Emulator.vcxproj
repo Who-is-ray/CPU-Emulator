@@ -116,12 +116,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Cache_Memory.cpp" />
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="Debugger.cpp" />
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Cache_Memory.h" />
     <ClInclude Include="CPU.h" />
     <ClInclude Include="Debugger.h" />
     <ClInclude Include="Memory.h" />
