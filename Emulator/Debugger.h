@@ -2,8 +2,8 @@
 #pragma once
 
 #include<list>	//library for list
-#include<map>
-#include<vector>
+#include<map>	//library for map
+#include<vector>	//library for vector
 #include "Memory.h"	//header that define memory class
 
 class CPU;

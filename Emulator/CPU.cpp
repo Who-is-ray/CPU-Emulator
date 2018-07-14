@@ -1,8 +1,7 @@
-#include "CPU.h"
-#include "Memory.h"
-#include <iostream>
-#include <fstream>
-#include <bitset>
+#include "CPU.h"	//CPU class header file
+#include "Memory.h"	//Memroy class header file
+#include <iostream>	//library for concole output
+#include <fstream>	//library for accessing file
 
 #define	BYTE_SIZE	8		//size of byte
 #define	LOWER_BYTE	0xff	//low byte data position in a word
@@ -46,19 +45,19 @@
 #define WORD_SIGN_BIT	1<<15	//sign bit of word data
 #define BYTE_CARRY_BIT	1<<8	//byte data carry bit
 #define WORD_CARRY_BIT	1<<16	//word data carry bit
-#define BYTE_CARRY_BIT_DEC	100
-#define WORD_CARRY_BIT_DEC	10000
-#define BIT_ONE			1
+#define BYTE_CARRY_BIT_DEC	100	//decimal byte carry bit
+#define WORD_CARRY_BIT_DEC	10000	//decimal word carry bit
+#define BIT_ONE			1	
 #define BIT_SIX			1<<6
 #define BIT_SEVEN		1<<7
 #define BIT_TWELVE		1<<11
 #define BIT_FOURTEEN	1<<14
 #define BIT_FIFTEEN		1<<15
 #define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X*4)	//get device vector address of a device
-#define GET_1ST_FOUR_BITS(X)	(X&0xf)
-#define GET_2ND_FOUR_BITS(X)	((X&0xf0)>>4)
-#define GET_3RD_FOUR_BITS(X)	((X&0xf00)>>8)
-#define GET_4TH_FOUR_BITS(X)	((X&0xf000)>>12)
+#define GET_1ST_FOUR_BITS(X)	(X&0xf)			//get the first four bits
+#define GET_2ND_FOUR_BITS(X)	((X&0xf0)>>4)	//get the second four bitss
+#define GET_3RD_FOUR_BITS(X)	((X&0xf00)>>8)	//get thrid four bits
+#define GET_4TH_FOUR_BITS(X)	((X&0xf000)>>12)	//get forth four bits
 
 //enum of opcode
 enum Opcode
@@ -772,9 +771,6 @@ void CPU::check_interrupt()
 			PROGRAM_COUNTER = MDR;
 
 			LINK_REGISTER = 0xffff;	//set LR to #$ffff
-
-			//unsigned short clear_ie = m_mem.m_memory.byte_mem[dev_num * 2] & (~CSR_IE);	//!!
-			//m_mem.m_memory.byte_mem[dev_num * 2] = (unsigned char)clear_ie;	//!!clear IE, so when this device handling interrupt, it no longer received data
 
 			it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
 			if (it->size() == 0)	//if the interrupt map of a time point is empty, erase this map from interrupt queue

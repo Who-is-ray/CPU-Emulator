@@ -1,6 +1,6 @@
 //Class of CPU
 #pragma once
-#include<string>	//library for using std::string and string functions
+#include<string>//library for using std::string and string functions
 #include<deque>	//library for queue
 #include<map>	//library for map
 

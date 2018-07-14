@@ -62,8 +62,6 @@ void sigint_hdlr()
 void Debugger::check_debugger_status(CPU& m_CPU, const unsigned int clock)
 {
 	unsigned short PC = m_CPU.get_register_val(ADDRESS_OF_PROGRAM_COUNTER);	//get PC value
-	//printf("PC = %4lx\n", m_CPU.get_register_val(7));	//program counter test print out	!!
-	//std::cout << "clock = " << clock << "\n";	//clock test print out
 
 	if (std::find(PC_BP_list.begin(), PC_BP_list.end(), PC) != PC_BP_list.end())	//if found a break point matchs current PC value
 	{
@@ -343,12 +341,6 @@ void Debugger::run_debugger()
 			break;
 		}
 	}
-	
-	////memeory test output!!
-	//for (size_t i = 250; i < 400; i++)
-	//{
-	//	printf("mem[%04lx]\t%02lx\n", i, mem.m_memory.byte_mem[i]);
-	//}
 }
 
 //add a new break point triggered by program counter
