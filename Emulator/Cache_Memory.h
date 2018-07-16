@@ -31,8 +31,9 @@ public:
 
 	void cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw = WORD);	//cache function, will be called by CPU when access data in cache
 
-private:
 	struct cache_line cache_mem[SIZE_OF_CACHE];	//cache memory cont
+
+private:
 	Memory& m_memory;	//the reference of memory
 	unsigned int& m_clock;	//system clock
 };

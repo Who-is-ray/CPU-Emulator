@@ -1,5 +1,6 @@
 #include "CPU.h"	//CPU class header file
-#include "Memory.h"	//Memroy class header file
+#include "Cache_Memory.h"	//Cache class header file
+#include "Memory.h"	//Memory class header file
 #include <iostream>	//library for concole output
 #include <fstream>	//library for accessing file
 
@@ -10,10 +11,10 @@
 #define PSW				Register_file[6]
 #define STACK_POINTER	Register_file[5]
 #define LINK_REGISTER	Register_file[4]
-#define GROUP_CODE			IR >> 13	//code of group of instructions
-#define GROUP_ONE_OPCODE	IR >> 10	//opcode of group one, bit 15 to 10
-#define GROUP_TWO_OPCODE	IR >> 8		//opcode of group two, bit 15 to 8
-#define GROUP_THREE_OPCODE	IR >> 11	//opcode of group three, bit 15 to 11
+#define GROUP_CODE			(IR >> 13)	//code of group of instructions
+#define GROUP_ONE_OPCODE	(IR >> 10)	//opcode of group one, bit 15 to 10
+#define GROUP_TWO_OPCODE	(IR >> 8)		//opcode of group two, bit 15 to 8
+#define GROUP_THREE_OPCODE	(IR >> 11)	//opcode of group three, bit 15 to 11
 #define	INVAILD_PC		0xffff			//invaild program counter value return from interrupt
 #define GET_CARRY(x)	(x&1)			//value of psw.carry
 #define	GET_ZERO(x)		(x&(1<<1))	//value of psw.zero
@@ -41,19 +42,19 @@
 #define BL_SIGN_EXTENSION				0b1100000000000000	//BL sign extension
 #define	RELATIVE_OFFSET					(IR & 0b1111110000000) >> 7	//get the value of relative offset
 #define RELATIVE_SIGN_EXTENSION			0b1111111110000000	//sign extension of relative sign extension
-#define BYTE_SIGN_BIT	1<<7	//sign bit of byte data
-#define WORD_SIGN_BIT	1<<15	//sign bit of word data
-#define BYTE_CARRY_BIT	1<<8	//byte data carry bit
-#define WORD_CARRY_BIT	1<<16	//word data carry bit
+#define BYTE_SIGN_BIT	(1<<7)	//sign bit of byte data
+#define WORD_SIGN_BIT	(1<<15)	//sign bit of word data
+#define BYTE_CARRY_BIT	(1<<8)	//byte data carry bit
+#define WORD_CARRY_BIT	(1<<16)	//word data carry bit
 #define BYTE_CARRY_BIT_DEC	100	//decimal byte carry bit
 #define WORD_CARRY_BIT_DEC	10000	//decimal word carry bit
 #define BIT_ONE			1	
-#define BIT_SIX			1<<6
-#define BIT_SEVEN		1<<7
-#define BIT_TWELVE		1<<11
-#define BIT_FOURTEEN	1<<14
-#define BIT_FIFTEEN		1<<15
-#define GET_DEV_VECTOR_ADDR(X)	0xFFC0+(X*4)	//get device vector address of a device
+#define BIT_SIX			(1<<6)
+#define BIT_SEVEN		(1<<7)
+#define BIT_TWELVE		(1<<11)
+#define BIT_FOURTEEN	(1<<14)
+#define BIT_FIFTEEN		(1<<15)
+#define GET_DEV_VECTOR_ADDR(X)	(0xFFC0+(X*4))	//get device vector address of a device
 #define GET_1ST_FOUR_BITS(X)	(X&0xf)			//get the first four bits
 #define GET_2ND_FOUR_BITS(X)	((X&0xf0)>>4)	//get the second four bitss
 #define GET_3RD_FOUR_BITS(X)	((X&0xf00)>>8)	//get thrid four bits
@@ -83,7 +84,7 @@ unsigned short dec_to_hex(int data);
 	linked memory reference to CPU memory reference
 	memory - memory of emulator
 */
-CPU::CPU(Memory& memory, unsigned int& clock) :m_mem(memory), m_clock(clock)
+CPU::CPU(Memory& memory, Cache_Memory& cache, unsigned int& clock) :m_cache(cache), m_clock(clock), m_mem(memory)
 {
 	fout.open("device_output.txt");	//initialize device output file
 }
@@ -96,7 +97,7 @@ void CPU::fetch()
 		if (interrput_queue.size() > 0)	//if there is pending interrupt at the end of last interrupt, process the earilest interrupt
 		{
 			//get the base routine's priority, which is store in the stack frame
-			m_mem.bus(STACK_POINTER + 2, MDR, READ, BYTE);
+			m_cache.cache(STACK_POINTER + 2, MDR, READ, BYTE);
 			unsigned short base_priority = MDR;
 
 			std::deque<std::map<unsigned char /*priority*/, unsigned char /*device number*/>>::iterator it = interrput_queue.begin();	//get the earliest interrupt map in the queue
@@ -106,11 +107,11 @@ void CPU::fetch()
 			{
 				unsigned char dev_num = it->rbegin()->second;
 				//the handler's PSW becomes the current PSW
-				m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
+				m_cache.cache(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
 				PSW = MDR;
 
 				//PC points to ISR
-				m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num) + 2, MDR, READ);
+				m_cache.cache(GET_DEV_VECTOR_ADDR(dev_num) + 2, MDR, READ);
 				PROGRAM_COUNTER = MDR;
 
 				it->erase(dev_priority);	//erase the pending interrupt from interrupt map of a time point
@@ -126,7 +127,7 @@ void CPU::fetch()
 
 	//if program counter is vaild
 	MAR = PROGRAM_COUNTER;	//load program counter to MAR
-	m_mem.bus(MAR, MDR, READ);	//read through bus, load insturction to MDR
+	m_cache.cache(MAR, MDR, READ);	//read through bus, load insturction to MDR
 	IR = MDR;	//load instruction from MDR to IR
 	PROGRAM_COUNTER += 2;	//update program counter
 }
@@ -191,12 +192,12 @@ void CPU::execute()
 		MAR = source + get_relative_offset();	//store source address + offset to MAR
 		if (W_B > 0)	//if processing byte size data
 		{
-			m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
+			m_cache.cache(MAR, MDR, READ, BYTE);	//access memory
 			write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//store data from MDR to destination register
 		}
 		else	//if processing word size data
 		{
-			m_mem.bus(MAR, MDR, READ);	//access memory
+			m_cache.cache(MAR, MDR, READ);	//access memory
 			Register_file[DST] = MDR;	//store data from MDR to destination register
 		}
 		break;
@@ -206,7 +207,7 @@ void CPU::execute()
 		unsigned short dst_address = Register_file[DST];	//get destination memory address
 		MAR = dst_address + get_relative_offset();	//store source address + offset to MAR
 		MDR = Register_file[SRC];	//store register value to MDR
-		W_B > 0 ? m_mem.bus(MAR, MDR, WRITE, BYTE) : m_mem.bus(MAR, MDR, WRITE);	//access memory byte|word size data
+		W_B > 0 ? m_cache.cache(MAR, MDR, WRITE, BYTE) : m_cache.cache(MAR, MDR, WRITE);	//access memory byte|word size data
 		break;
 	}
 	case BEQ_BZ:	//Opcode = 001000 (BEQ/BZ)
@@ -763,11 +764,11 @@ void CPU::check_interrupt()
 			push_to_stack(LINK_REGISTER);	//push LR to stack
 
 			//the handler's PSW becomes the current PSW
-			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
+			m_cache.cache(GET_DEV_VECTOR_ADDR(dev_num), MDR, READ);
 			PSW = MDR;
 
 			//PC points to ISR
-			m_mem.bus(GET_DEV_VECTOR_ADDR(dev_num) + 2, MDR, READ);
+			m_cache.cache(GET_DEV_VECTOR_ADDR(dev_num) + 2, MDR, READ);
 			PROGRAM_COUNTER = MDR;
 
 			LINK_REGISTER = 0xffff;	//set LR to #$ffff
@@ -874,12 +875,12 @@ void CPU::push_to_stack(unsigned short data_to_push)	//push a data to stack poin
 {
 	MDR = data_to_push;
 	STACK_POINTER -= 2;
-	m_mem.bus(STACK_POINTER, MDR, WRITE);
+	m_cache.cache(STACK_POINTER, MDR, WRITE);
 }
 
 void CPU::pull_from_stack(unsigned short& data_to_pull)
 {
-	m_mem.bus(STACK_POINTER, MDR, READ);
+	m_cache.cache(STACK_POINTER, MDR, READ);
 	STACK_POINTER += 2;
 	data_to_pull = MDR;
 }
@@ -898,7 +899,7 @@ void CPU::return_from_interrupt()
 void CPU::load_word()
 {
 	MAR = Register_file[SRC];	//load memory address stored in register to MAR
-	m_mem.bus(MAR, MDR, READ);	//access memory
+	m_cache.cache(MAR, MDR, READ);	//access memory
 	Register_file[DST] = MDR;	//load data from MDR to DST register
 }
 
@@ -906,7 +907,7 @@ void CPU::load_word()
 void CPU::load_byte()
 {
 	MAR = Register_file[SRC];	//load memory address stored in register to MAR
-	m_mem.bus(MAR, MDR, READ, BYTE);	//access memory
+	m_cache.cache(MAR, MDR, READ, BYTE);	//access memory
 	write_byte_to_dst(Register_file[DST], (unsigned char)MDR);	//load data from MDR to DST register
 }
 
@@ -915,7 +916,7 @@ void CPU::store_word()
 {
 	MAR = Register_file[DST];	//load memory address stored in register to MAR
 	MDR = Register_file[SRC];	//store data from DST register to MDR
-	m_mem.bus(MAR, MDR, WRITE);	//access memory
+	m_cache.cache(MAR, MDR, WRITE);	//access memory
 }
 
 //load byte size data to DST register
@@ -923,7 +924,7 @@ void CPU::store_byte()
 {
 	MAR = Register_file[DST];	//load memory address stored in register to MAR
 	MDR = Register_file[SRC];	//store data from DST register to MDR
-	m_mem.bus(MAR, MDR, WRITE, BYTE);	//access memory
+	m_cache.cache(MAR, MDR, WRITE, BYTE);	//access memory
 }
 
 int hex_to_dec(unsigned short data)

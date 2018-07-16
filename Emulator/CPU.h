@@ -7,6 +7,7 @@
 #define SIZE_OF_REGISTER	8
 #define SIZE_OF_CONST_TABLE	8
 
+class Cache_Memory;
 class Memory;
 
 struct output_data_info
@@ -19,7 +20,7 @@ struct output_data_info
 class CPU
 {
 public:
-	CPU(Memory& memory, unsigned int& clock);	//constructor
+	CPU(Memory& memory, Cache_Memory& cache, unsigned int& clock);	//constructor
 	~CPU() {}	//destructor
 
 	unsigned short get_register_val(int loc) { return Register_file[loc]; }	//get a specific register value
@@ -35,7 +36,8 @@ public:
 
 private:
 	unsigned short Register_file[SIZE_OF_REGISTER] = {NULL};	//register file
-	Memory& m_mem;	//memory pointer
+	Cache_Memory& m_cache;	//cache reference
+	Memory& m_mem;	//memory reference
 	unsigned int& m_clock;	//system clock
 	unsigned short MAR;	//memory address register
 	unsigned short MDR;	//memory data register

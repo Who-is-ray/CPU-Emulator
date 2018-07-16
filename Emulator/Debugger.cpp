@@ -1,5 +1,6 @@
 #include "Debugger.h"	//header that define debugger class
 #include "CPU.h"	//header that define CPU class
+#include "Cache_Memory.h"	//header that define Cache class
 #include <iostream>	//library for cin
 #include <fstream>	//Input/output stream class to operate on files
 #include <string>	//library for string
@@ -33,10 +34,11 @@ int help_func()
 			<< " 9: Update data from a memory\n"
 			<< "10: Update a data from a register\n"
 			<< "11: Run CPU\n"
-			<< "12: Exit\n"
+			<< "12: Display Cache\n"
+			<< "13: Exit\n"
 			<< "Choose a command, type the number of command:	";
 		std::cin >> user_cmd;
-		if (user_cmd >= 0 && user_cmd < 13)	//if has vaild command
+		if (user_cmd >= 0 && user_cmd <= 13)	//if has vaild command
 			wait_for_cmd = false;	//stop waiting command
 		else
 			std::cout << "Wrong command, input again!\n";
@@ -219,7 +221,8 @@ void Debugger::run_debugger()
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
 	unsigned int clock = 0;	//Initialize clock, the reason I put clock here is because clock usually are located outside CPU, such us matherboard
 	Memory mem(clock);	//initialize memory
-	CPU m_CPU(mem, clock);
+	Cache_Memory cache(mem, clock);	//initialize cache
+	CPU m_CPU(mem, cache, clock);
 	int user_cmd=0;	//user's command
 	debugger_is_running = true;
 
@@ -332,7 +335,15 @@ void Debugger::run_debugger()
 			}
 			break;
 		}
-		case 12:	//exit debugger
+		case 12:
+		{
+			for (size_t i = 0; i < SIZE_OF_CACHE; i++)
+			{
+				printf("cache[%2d]: address = %04lx	content = %04lx\n", i, cache.cache_mem[i].address,cache.cache_mem[i].content);	//display hex decimal of the address and content of cache
+			}
+			break;
+		}
+		case 13:	//exit debugger
 		{
 			debugger_is_running = false;
 			break;
