@@ -1,4 +1,0 @@
-at time 213, device 4 output C
-at time 301, device 4 output 2
-at time 401, device 4 output A
-at time 501, device 4 output D

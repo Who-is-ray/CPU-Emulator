@@ -17,10 +17,11 @@
 #ifdef DIRECT_MAPPING_CACHE
 void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw)	//cache function for Direct mapping
 {
-	if (MAR > DEVICE_CSR && MAR < DEVICE_VECTOR)	//if not access any device CSR and device vector
+	if (MAR > DEVICE_CSR)	//if not access any device CSR and device vector
 	{
 		unsigned short addr = MAR >> 1;	//because cache content is word size, each content includes two memory byte: mem[n] and mem[n+1], n is even, so addr ignored even or odd difference
 		unsigned unsigned int c_addr = GET_DIRECT_CACHE_ADDR(MAR);	//get cache address
+		m_clock += 2;
 		if (rw == READ)	//read
 		{
 			if (cache_mem[c_addr].address == addr)	//if hit
@@ -87,10 +88,11 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 #ifdef ASSOCIATIVE_CACHE
 void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw)	//cache function for Direct mapping
 {
-	if (MAR > DEVICE_CSR && MAR < DEVICE_VECTOR)	//if not access any device CSR and device vector
+	if (MAR > DEVICE_CSR)	//if not access any device CSR and device vector
 	{
 		unsigned short addr = MAR >> 1;	//because cache content is word size, each content includes two memory byte: mem[n] and mem[n+1], n is even, so addr ignored even or odd difference
 		bool hit = false;	//hit flag
+		m_clock += 2;
 		for (size_t c_addr = 0; c_addr < SIZE_OF_CACHE; c_addr++)
 		{
 			if (cache_mem[c_addr].address == addr)	//if hit
@@ -126,7 +128,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 			unsigned int c_addr;
 			for (size_t i = 0; i < SIZE_OF_CACHE; i++)
 			{
-				if (cache_mem[i].dirty.dirty_byte.age == 0)
+				if (cache_mem[i].dirty.dirty_byte.age == 0)	//get the least recent cache address
 					c_addr = i;
 				else
 					cache_mem[i].dirty.dirty_byte.age -= 1;	//update cache's age
