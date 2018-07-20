@@ -1,0 +1,4 @@
+at time 522, device 4 output C
+at time 626, device 4 output 2
+at time 722, device 4 output A
+at time 826, device 4 output D

@@ -31,7 +31,7 @@ public:
 	void execute();	//CPU execute function, emulate execute routine
 	void check_interrupt();	//check interrput to emulate interrupt
 
-	std::map<unsigned char /*device number*/, unsigned char /*processing time*/>device_process_time;	//map stores each output device's processing time
+	std::map<unsigned char /*device number*/, unsigned int /*processing time*/>device_process_time;	//map stores each output device's processing time
 
 private:
 	unsigned short Register_file[SIZE_OF_REGISTER] = {NULL};	//register file

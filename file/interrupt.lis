@@ -17,59 +17,49 @@ X-Makina Assembler - Version 1.18 (27 June 2018)
  14	    	     		STKTOP		equ	#$FFBE	; Top-of-stack - word below device vectors
  15	    	     		org	#$500
  16	    	     	
- 17	0500	9106		movl comp_psw,PSW		;set computer priority equal to 1
+ 17	0500	9106	Start	movl comp_psw,PSW		;set computer priority equal to 1
  18	    	     		
  19	    	     		; Initialize stack point
  20	0502	95F5		movl	STKTOP,SP	; LSB to SP
  21	0504	A7FD		movh	STKTOP,SP	; MSB to SP
  22	    	     		
- 23	    	     		;set device 0 priority equal to 3
- 24	0506	9600		movl dev0_vec,R0		
- 25	0508	A7F8		movh dev0_vec,R0
- 26	050A	9301		movl dev0_psw,R1
- 27	050C	A001		movh dev0_psw,R1
- 28	050E	8808		st	R1,R0
+ 23	    	     		;turn on the PSW.IE of device 1
+ 24	0506	9000		movl dev0,R0		
+ 25	0508	A000		movh dev0,R0
+ 26	050A	8001		ld R0,R1
+ 27	050C	6089		add #1,R1
+ 28	050E	8808		st R1,R0
  29	    	     		
- 30	    	     		;set device 4 priority equal to 4
- 31	0510	9680		movl dev4_vec,R0		
- 32	0512	A7F8		movh dev4_vec,R0
- 33	0514	9401		movl dev4_psw,R1
- 34	0516	A001		movh dev4_psw,R1
- 35	0518	8808		st	R1,R0
- 36	    	     		
- 37	    	     		;set device0's ISR address	
- 38	051A	9610		movl isr0_addr,R0		
- 39	051C	A7F8		movh isr0_addr,R0
- 40	051E	9001		movl isr0,R1
- 41	0520	A101		movh isr0,R1
- 42	0522	8808		st	R1,R0
- 43	    	     		
- 44	    	     		;turn on the PSW.IE of device 1
- 45	0524	9000		movl dev0,R0		
- 46	0526	A000		movh dev0,R0
- 47	0528	8001		ld R0,R1
- 48	052A	6089		add #1,R1
- 49	052C	8808		st R1,R0
+ 30	    	     	wait
+ 31	0510	3FFF		bal wait
+ 32	    	     			
+ 33	    	     		org #$2000
+ 34	    	     	isr0
+ 35	2000	9000		movl dev0,R0		;set device 1 address
+ 36	2002	A000		movh dev0,R0
+ 37	    	     		;movl dev4,R1		;set device 4 address
+ 38	    	     		;movh dev4,R1
+ 39	2004	C0C2		ldr.b	R0,#1,R2
+ 40	    	     		;ld.b R1,R2
+ 41	2006	E4D0		str.b	R2,R0,#9			;load data in dev0 to dev 4
+ 42	2008	7627		mov LR,PC
+ 43	    	     	;
+ 44	    	     		org #$ffc0
+ 45	FFC0	0060		word #$0060
+ 46	FFC2	2000		word isr0
+ 47	    	     		
+ 48	    	     		org #$ffd0
+ 49	FFD0	0080		word #$80
  50	    	     		
- 51	    	     	wait
- 52	052E	3FFF		bal wait
- 53	    	     		
- 54	    	     		org #$2000
- 55	    	     	isr0
- 56	2000	9000		movl dev0,R0		;set device 1 address
- 57	2002	A000		movh dev0,R0
- 58	    	     		;movl dev4,R1		;set device 4 address
- 59	    	     		;movh dev4,R1
- 60	2004	C0C2		ldr.b	R0,#1,R2
- 61	    	     		;ld.b R1,R2
- 62	2006	E4D0		str.b	R2,R0,#9			;load data in dev0 to dev 4
- 63	2008	7627		mov LR,PC
+ 51	    	     		end	Start
+
 Successful completion of assembly
 
 ** Symbol table **
 Name                               	Type	Value	Decimal
-wait                               	LBL	052E	1326
 isr0                               	LBL	2000	8192
+wait                               	LBL	0510	1296
+Start                              	LBL	0500	1280
 STKTOP                             	LBL	FFBE	-66
 PC                                 	REG	0007	7
 SP                                 	REG	0005	5

@@ -14,32 +14,11 @@
 	STKTOP		equ	#$FFBE	; Top-of-stack - word below device vectors
 	org	#$500
 
-	movl comp_psw,PSW		;set computer priority equal to 1
+Start	movl comp_psw,PSW		;set computer priority equal to 1
 	
 	; Initialize stack point
 	movl	STKTOP,SP	; LSB to SP
 	movh	STKTOP,SP	; MSB to SP
-	
-	;set device 0 priority equal to 3
-	movl dev0_vec,R0		
-	movh dev0_vec,R0
-	movl dev0_psw,R1
-	movh dev0_psw,R1
-	st	R1,R0
-	
-	;set device 4 priority equal to 4
-	movl dev4_vec,R0		
-	movh dev4_vec,R0
-	movl dev4_psw,R1
-	movh dev4_psw,R1
-	st	R1,R0
-	
-	;set device0's ISR address	
-	movl isr0_addr,R0		
-	movh isr0_addr,R0
-	movl isr0,R1
-	movh isr0,R1
-	st	R1,R0
 	
 	;turn on the PSW.IE of device 1
 	movl dev0,R0		
@@ -50,7 +29,7 @@
 	
 wait
 	bal wait
-	
+		
 	org #$2000
 isr0
 	movl dev0,R0		;set device 1 address
@@ -61,3 +40,12 @@ isr0
 	;ld.b R1,R2
 	str.b	R2,R0,#9			;load data in dev0 to dev 4
 	mov LR,PC
+;
+	org #$ffc0
+	word #$0060
+	word isr0
+	
+	org #$ffd0
+	word #$80
+	
+	end	Start
