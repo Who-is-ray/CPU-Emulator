@@ -13,6 +13,8 @@
 
 //#define DIRECT_MAPPING_CACHE
 #define ASSOCIATIVE_CACHE
+//#define WRITE_BACK
+#define WRITE_THROUGH
 
 #ifdef DIRECT_MAPPING_CACHE
 void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw)	//cache function for Direct mapping
@@ -53,6 +55,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 		}
 		else	//write
 		{
+#ifdef WRITE_BACK
 			if (cache_mem[c_addr].address == addr)	//if hit
 			{
 				if (bw == BYTE)	//access byte size data
@@ -78,11 +81,21 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 				cache_mem[c_addr].address = addr;	//assign correct address to cache
 			}
 			cache_mem[c_addr].dirty.dirty_byte.dirty_bit = 1;	//set dirty bit
+#endif // WRITE_BACK
+#ifdef WRITE_THROUGH
+			m_memory.bus(MAR, MDR, WRITE, bw);	//load content from memory to cache
+			if (bw == BYTE)	//if access byte size memory
+				m_memory.bus(GET_MEMORY_ADDR(MAR), cache_mem[c_addr].content, READ);	//keep word content consistent
+			else	//if access word size memory
+				cache_mem[c_addr].content = MDR;	//write data to cache
+			cache_mem[c_addr].address = addr;	//assign correct address to cache
+#endif // WRITE_THROUGH
 		}
 	}
 	else	//if access device CSR or device vector
 		m_memory.bus(MAR, MDR, rw, bw);	//call bus
 }
+
 #endif // DIRECT_MAPPING_CACHE
 
 #ifdef ASSOCIATIVE_CACHE
@@ -106,6 +119,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 						MDR = cache_mem[c_addr].content;	//assign data to MDR
 				else	//write
 				{
+#ifdef WRITE_BACK
 					if (bw == BYTE)	//access byte size data
 						cache_mem[c_addr].content = ((MAR & 1) == 1) ?
 						(CLEAR_HIGH_BYTE(cache_mem[c_addr].content) + TO_HIGH_BYTE(MDR)) :
@@ -113,6 +127,14 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 					else	//access word size data
 						cache_mem[c_addr].content = MDR;	//assign data to cache
 					cache_mem[c_addr].dirty.dirty_byte.dirty_bit = 1;	//set dirty bit
+#endif // WRITE_BACK
+#ifdef WRITE_THROUGH
+					m_memory.bus(MAR, MDR, WRITE, bw);	//load content from memory to cache
+					if (bw == BYTE)	//if access byte size memory
+						m_memory.bus(GET_MEMORY_ADDR(MAR), cache_mem[c_addr].content, READ);	//keep word content consistent
+					else	//if access word size memory
+						cache_mem[c_addr].content = MDR;	//write data to cache
+#endif // WRITE_THROUGH
 				}
 				hit = true;
 
@@ -153,6 +175,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 			}
 			else	//write
 			{
+#ifdef WRITE_BACK
 				if (bw == BYTE)	//if access byte size memory
 				{
 					m_memory.bus(GET_MEMORY_ADDR(MAR), cache_mem[c_addr].content, READ);	//load content from memory to cache
@@ -163,6 +186,14 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 				else	//if access word size memory
 					cache_mem[c_addr].content = MDR;	//write data to cache
 				cache_mem[c_addr].dirty.dirty_byte.dirty_bit = 1;	//set dirty bit
+#endif // WRITE_BACK
+#ifdef WRITE_THROUGH
+				m_memory.bus(MAR, MDR, WRITE, bw);	//load content from memory to cache
+				if (bw == BYTE)	//if access byte size memory
+					m_memory.bus(GET_MEMORY_ADDR(MAR), cache_mem[c_addr].content, READ);	//keep word content consistent
+				else	//if access word size memory
+					cache_mem[c_addr].content = MDR;	//write data to cache
+#endif // WRITE_THROUGH
 			}
 			cache_mem[c_addr].address = addr;	//assign correct address to cache
 			cache_mem[c_addr].dirty.dirty_byte.age = HIGHEST_AGE;	//set latest cache to highest age value

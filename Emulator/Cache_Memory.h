@@ -10,20 +10,20 @@ struct dirty_byte	//dirty byte and access
 	unsigned char age : 5;	//age bits indicated the most recently used data
 };
 
-union dirty
+union dirty	//define dirty_byte as byte size
 {
-	unsigned char byte = 0;
+	unsigned char byte = 0;	//byte size with initial value of zero
 	struct dirty_byte dirty_byte;
 };
 
-struct cache_line
+struct cache_line	//structure of cache line
 {
 	unsigned short address = 0;	//primary memory address with initial value of zero
 	unsigned short content = 0;	//contents of the primary memory address with initial value of zero
 	dirty dirty;	//dirty bit with initial value of zero, and age value with initial value of zero
 };
 
-class Cache_Memory
+class Cache_Memory	//memory of class
 {
 public:
 	Cache_Memory(Memory& mem, unsigned int& clock) : m_memory(mem), m_clock(clock) {}	//Constructor, initialize the reference of m_memory
