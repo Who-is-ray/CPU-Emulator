@@ -1,5 +1,8 @@
 #if 1	//debug
-//
+/*
+The X - Makina Project
+- Ray Su
+*/
 #include "Debugger.h"	//the header file of debugger class
 
 /*
