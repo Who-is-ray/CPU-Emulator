@@ -1,0 +1,46 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: cwrite.asm
+
+  1	    	     	;
+  2	    	     	; Test code for cache
+  3	    	     	; Ray Su
+  4	    	     	; 1st August, 2018
+  5	    	     	;
+  6	    	     	
+  7	    	     		addr_66	equ #$66
+  8	    	     		addr_e6 equ #$e6
+  9	    	     		
+ 10	    	     		org	#$100
+ 11	    	     	Main
+ 12	0100	9B31		movlz addr_66,R1 ;set R1 to target memory[66] address
+ 13	0102	9F32		movlz addr_e6,R2
+ 14	0104	8008		ld R1,R0
+ 15	0106	6088		add	#1,R0	;increment R0
+ 16	0108	8801		st R0,R1	;store R0 to memory[66]
+ 17	010A	8802		st R0,R2	;store R0 to memory[e6]
+ 18	    	     		
+ 19	    	     		org #$14c
+ 20	014C	3FD9		bal Main
+ 21	    	     		
+ 22	    	     		org #$66
+ 23	0066	1234		word	#$1234
+ 24	    	     		
+ 25	    	     		end	Main
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+Main                               	LBL	0100	256
+addr_e6                            	LBL	00E6	230
+addr_66                            	LBL	0066	102
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\Emulator\file\cwrite.xme
+

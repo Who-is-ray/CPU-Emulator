@@ -19,7 +19,6 @@ Start	movl comp_psw,PSW		;set computer priority equal to 1
 	; Initialize stack point
 	movl	STKTOP,SP	; LSB to SP
 	movh	STKTOP,SP	; MSB to SP
-	
 	;turn on the PSW.IE of device 1
 	movl dev0,R0		
 	movh dev0,R0

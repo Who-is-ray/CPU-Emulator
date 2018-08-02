@@ -342,8 +342,8 @@ void Debugger::run_debugger()
 			{
 				for (size_t i = 0; i < LINE_PER_PAGE; i++)
 				{
-					printf("cache[%2d]: address = %04lx	content = %04lx		dirty = %1d	age = %02lx\n",
-						i, (cache.cache_mem[page_addr].cache_line[i].address << 1), cache.cache_mem[page_addr].cache_line[i].content,
+					printf("cache[%d-%d]: address = %04lx	content = %04lx		dirty = %1d	age = %02lx\n",
+						page_addr, i, (cache.cache_mem[page_addr].cache_line[i].address << 1), cache.cache_mem[page_addr].cache_line[i].content,
 						cache.cache_mem[page_addr].cache_line[i].dirty.dirty_byte.dirty_bit,
 						cache.cache_mem[page_addr].cache_line[i].dirty.dirty_byte.age);	//display hex decimal of the address and content of cache
 				}

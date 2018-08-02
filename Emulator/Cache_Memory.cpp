@@ -275,6 +275,9 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 					else	//access word size data
 						cache_mem[page_addr].cache_line[i].content = MDR;	//assign data to cache
 					c_addr = i;  //assign target cache address
+#ifdef WRITE_BACK
+					cache_mem[page_addr].cache_line[c_addr].dirty.dirty_byte.dirty_bit = 1;	//set dirty bit
+#endif // WRITE_BACK
 					hit = true;
 					break;
 				}

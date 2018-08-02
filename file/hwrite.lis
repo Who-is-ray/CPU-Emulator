@@ -1,0 +1,60 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: hwrite.asm
+
+  1	    	     	;
+  2	    	     	; Test code for cache
+  3	    	     	; Ray Su
+  4	    	     	; 1st August, 2018
+  5	    	     	;
+  6	    	     	
+  7	    	     		addr_66	equ #$66
+  8	    	     		addr_e6 equ #$e6
+  9	    	     		addr_1e6 equ #$1e6
+ 10	    	     		addr_2e6 equ #$2e6
+ 11	    	     		addr_3e6 equ #$3e6
+ 12	    	     		
+ 13	    	     		org	#$100
+ 14	    	     	Main
+ 15	0100	9B31		movlz addr_66,R1 ;set R1 to target memory[66] address
+ 16	0102	8008		ld R1,R0
+ 17	0104	6088		add	#1,R0	;increment R0
+ 18	0106	8801		st R0,R1	;store R0 to memory[66]
+ 19	0108	9F31		movlz addr_e6,R1
+ 20	010A	8801		st R0,R1	;store R0 to memory[e6]
+ 21	010C	9F31		movlz addr_1e6,R1
+ 22	010E	A009		movh addr_1e6,R1
+ 23	0110	8801		st R0,R1	;store R0 to memory[e6]
+ 24	0112	9F31		movlz addr_2e6,R1
+ 25	0114	A011		movh addr_2e6,R1
+ 26	0116	8801		st R0,R1	;store R0 to memory[e6]
+ 27	0118	9F31		movlz addr_3e6,R1
+ 28	011A	A019		movh addr_3e6,R1
+ 29	011C	8801		st R0,R1	;store R0 to memory[e6]
+ 30	    	     	
+ 31	011E	3FF0		bal Main
+ 32	    	     		
+ 33	    	     		org #$66
+ 34	0066	1234		word	#$1234
+ 35	    	     		
+ 36	    	     		end	Main
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+Main                               	LBL	0100	256
+addr_3e6                           	LBL	03E6	998
+addr_2e6                           	LBL	02E6	742
+addr_1e6                           	LBL	01E6	486
+addr_e6                            	LBL	00E6	230
+addr_66                            	LBL	0066	102
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\Emulator\file\hwrite.xme
+

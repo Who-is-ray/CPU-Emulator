@@ -1,0 +1,46 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: ctest.asm
+
+  1	    	     	;
+  2	    	     	; Test code for cache
+  3	    	     	; Ray Su
+  4	    	     	; 1st August, 2018
+  5	    	     	;
+  6	    	     	
+  7	    	     		org	#$100
+  8	    	     	Main
+  9	0100	6088		add	#1,R0	;increment R0
+ 10	0102	6A90		cmp	#2,R0	;test is R0 = 2?
+ 11	0104	207D		beq Func	;go func if equal
+ 12	0106	3FFC		bal Main
+ 13	    	     		
+ 14	    	     		org #$200
+ 15	    	     	Func
+ 16	0200	9800		movlz	#0,R0	;clear R0
+ 17	0202	9809		movlz   #1,R1	;set R1 to 1
+ 18	0204	9812		movlz	#2,R2	;set R2 to 2
+ 19	0206	3D7C		bal wait
+ 20	    	     		
+ 21	    	     		org #$500
+ 22	    	     	wait
+ 23	0500	3FFF		bal wait		;finished
+ 24	    	     		
+ 25	    	     		end	Main
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+wait                               	LBL	0500	1280
+Func                               	LBL	0200	512
+Main                               	LBL	0100	256
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: H:\Repos\Emulator\file\ctest.xme
+
