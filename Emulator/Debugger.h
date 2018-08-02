@@ -35,6 +35,8 @@ public:
 	void check_device_table(Memory& mem, const unsigned int clock);	//check device table to emulate input output device
 	void update_CSR(ACTION rw, SIZE bw, unsigned short address, Memory& mem);
 
+	int hit=0;
+	int miss=0;
 private:
 	std::list<int> PC_BP_list;	//break point list relate to Program Counter 
 	unsigned int clock_limit;	//clock limit for debugger running

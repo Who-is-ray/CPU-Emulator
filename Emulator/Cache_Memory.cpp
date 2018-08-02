@@ -23,10 +23,13 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 		if (rw == READ)	//read
 		{
 			if (cache_mem[c_addr].address == addr)	//if hit
+			{
 				if (bw == BYTE)	//access byte size data
 					MDR = ((MAR & 1) == 1) ? READ_HIGH_BYTE(cache_mem[c_addr].content) : CLEAR_HIGH_BYTE(cache_mem[c_addr].content);	//assign high or low byte data to MDR
 				else	//access word size data
 					MDR = cache_mem[c_addr].content;	//assign data to MDR
+				c_hit += 1;
+			}
 			else	//if miss
 			{
 				if (cache_mem[c_addr].dirty.dirty_byte.dirty_bit)	//if dirty bit set
@@ -47,6 +50,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 					cache_mem[c_addr].content = MDR;	//assign data to cache
 					cache_mem[c_addr].address = addr;	//assign address to cache
 				}
+				miss += 1;
 			}
 		}
 		else	//write
@@ -60,6 +64,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 					(CLEAR_LOW_BYTE(cache_mem[c_addr].content) + CLEAR_HIGH_BYTE(MDR));	// assign high/low byte data to cache
 				else	//access word size data
 					cache_mem[c_addr].content = MDR;	//assign data to cache
+				c_hit += 1;
 			}
 			else	//miss
 			{
@@ -75,6 +80,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 				else	//if access word size memory
 					cache_mem[c_addr].content = MDR;	//write data to cache
 				cache_mem[c_addr].address = addr;	//assign correct address to cache
+				miss += 1;
 			}
 			cache_mem[c_addr].dirty.dirty_byte.dirty_bit = 1;	//set dirty bit
 #else //WRITE_THROUGH
@@ -105,6 +111,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 		{
 			if (cache_mem[c_addr].address == addr)	//if hit
 			{
+				c_hit += 1;
 				unsigned char age = cache_mem[c_addr].dirty.dirty_byte.age;	//previous cache line's age
 
 				if (rw == READ)	//read
@@ -141,6 +148,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 		}
 		if (!hit)	//if miss
 		{
+			miss += 1;
 			unsigned int c_addr;
 			for (size_t i = 0; i < NUM_OF_CACHELINE; i++)	//go through each cache line
 			{
@@ -214,6 +222,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 			{
 				if (cache_mem[page_addr].cache_line[i].address == addr)	//if hit
 				{
+					c_hit += 1;
 					age = cache_mem[page_addr].cache_line[i].dirty.dirty_byte.age;	//previous cache line's age
 					if (bw == BYTE)	//access byte size data
 						MDR = ((MAR & 1) == 1) ? READ_HIGH_BYTE(cache_mem[page_addr].cache_line[i].content) : CLEAR_HIGH_BYTE(cache_mem[page_addr].cache_line[i].content);	//assign high or low byte data to MDR
@@ -234,6 +243,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 			}
 			else	//if miss
 			{
+				miss += 1;
 				for (size_t i = 0; i < LINE_PER_PAGE; i++)
 				{
 					if (cache_mem[page_addr].cache_line[i].dirty.dirty_byte.age == 0)	//get the least recent cache address
@@ -267,6 +277,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 			{
 				if (cache_mem[page_addr].cache_line[i].address == addr)	//if hit
 				{
+					c_hit += 1;
 					age = cache_mem[page_addr].cache_line[i].dirty.dirty_byte.age;	//previous cache line's age
 					if (bw == BYTE)	//access byte size data
 						cache_mem[page_addr].cache_line[i].content = ((MAR & 1) == 1) ?
@@ -292,6 +303,7 @@ void Cache_Memory::cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZ
 			}
 			else	//if miss
 			{
+				miss += 1;
 				for (size_t i = 0; i < LINE_PER_PAGE; i++)	//go through each cache line in page
 				{
 					if (cache_mem[page_addr].cache_line[i].dirty.dirty_byte.age == 0)	//get the least recent cache address
