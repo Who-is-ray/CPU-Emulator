@@ -6,10 +6,10 @@
 #define LINE_PER_PAGE 4		//number of cache line per page
 
 //#define DIRECT_MAPPING_CACHE
-//#define ASSOCIATIVE_CACHE
-#define HYBRID_CACHE
-#define WRITE_BACK
-//#define WRITE_THROUGH
+#define ASSOCIATIVE_CACHE
+//#define HYBRID_CACHE
+//#define WRITE_BACK
+#define WRITE_THROUGH
 
 struct dirty_byte	//dirty byte and access
 {
