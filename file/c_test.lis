@@ -1,0 +1,50 @@
+X-Makina Assembler - Version 1.18 (27 June 2018)
+.ASM file: c_test.asm
+
+  1	    	     	;
+  2	    	     	; Test code for cache
+  3	    	     	; Ray Su
+  4	    	     	;
+  5	    	     	
+  6	    	     		ORG	#$100
+  7	    	     	ARRAY
+  8	    	     		BSS#64
+  9	    	     		
+ 10	    	     		ORG #$200
+ 11	    	     	START
+ 12	0200	9000		MOVL ARRAY,R0
+ 13	0202	A008		MOVH ARRAY,R0
+ 14	0204	7681		MOV #0,R1
+ 15	0206	9A0A		MOVLZ #'A',R2
+ 16	0208	9A03		MOVLZ #64,R3
+ 17	    	     	
+ 18	    	     	LOOP
+ 19	020A	8950		ST.B R2,R0+
+ 20	020C	608A		ADD #1,R2
+ 21	020E	648B		SUB #1,R3
+ 22	0210	6A83		CMP #0,R3
+ 23	0212	27FB		BNE LOOP
+ 24	    	     		
+ 25	    	     	;
+ 26	0214	3FFF	DONE BAL DONE
+ 27	    	     		END START
+Successful completion of assembly
+
+** Symbol table **
+Name                               	Type	Value	Decimal
+DONE                               	LBL	0214	532
+LOOP                               	LBL	020A	522
+START                              	LBL	0200	512
+BSS#64                             	LBL	0100	256
+ARRAY                              	LBL	0100	256
+R7                                 	REG	0007	7
+R6                                 	REG	0006	6
+R5                                 	REG	0005	5
+R4                                 	REG	0004	4
+R3                                 	REG	0003	3
+R2                                 	REG	0002	2
+R1                                 	REG	0001	1
+R0                                 	REG	0000	0
+
+.XME file: D:\Repos\emulator\file\c_test.xme
+

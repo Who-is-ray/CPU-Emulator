@@ -1,0 +1,27 @@
+;
+; Test code for cache
+; Ray Su
+;
+
+	ORG	#$100
+ARRAY
+	BSS#64
+	
+	ORG #$200
+START
+	MOVL ARRAY,R0
+	MOVH ARRAY,R0
+	MOV #0,R1
+	MOVLZ #'A',R2
+	MOVLZ #64,R3
+
+LOOP
+	ST.B R2,R0+
+	ADD #1,R2
+	SUB #1,R3
+	CMP #0,R3
+	BNE LOOP
+	
+;
+DONE BAL DONE
+	END START

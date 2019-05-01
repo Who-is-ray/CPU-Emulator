@@ -18,14 +18,13 @@ X-Makina Assembler - Version 1.18 (27 June 2018)
  15	0106	6088		add	#1,R0	;increment R0
  16	0108	8801		st R0,R1	;store R0 to memory[66]
  17	010A	8802		st R0,R2	;store R0 to memory[e6]
- 18	    	     		
- 19	    	     		org #$14c
- 20	014C	3FD9		bal Main
- 21	    	     		
- 22	    	     		org #$66
- 23	0066	1234		word	#$1234
- 24	    	     		
- 25	    	     		end	Main
+ 18	    	     	
+ 19	010C	3FF9		bal Main
+ 20	    	     		
+ 21	    	     		org #$66
+ 22	0066	1234		word	#$1234
+ 23	    	     		
+ 24	    	     		end	Main
 Successful completion of assembly
 
 ** Symbol table **
@@ -42,5 +41,5 @@ R2                                 	REG	0002	2
 R1                                 	REG	0001	1
 R0                                 	REG	0000	0
 
-.XME file: H:\Repos\Emulator\file\cwrite.xme
+.XME file: D:\Repos\emulator\file\cwrite.xme
 

@@ -15,8 +15,7 @@ Main
 	add	#1,R0	;increment R0
 	st R0,R1	;store R0 to memory[66]
 	st R0,R2	;store R0 to memory[e6]
-	
-	org #$14c
+
 	bal Main
 	
 	org #$66

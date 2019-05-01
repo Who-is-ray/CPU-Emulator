@@ -5,9 +5,9 @@
 #define NUM_OF_PAGE	8		//number of page in cache
 #define LINE_PER_PAGE 4		//number of cache line per page
 
-//#define DIRECT_MAPPING_CACHE
+#define DIRECT_MAPPING_CACHE
 //#define ASSOCIATIVE_CACHE
-#define HYBRID_CACHE
+//#define HYBRID_CACHE
 #define WRITE_BACK
 //#define WRITE_THROUGH
 
@@ -44,10 +44,13 @@ struct page		//struct of page
 class Cache_Memory	//memory of class
 {
 public:
-	Cache_Memory(Memory& mem, unsigned int& clock) : m_memory(mem), m_clock(clock) {}	//Constructor, initialize the reference of m_memory
+	Cache_Memory(Memory& mem, unsigned int& clock,int& d_hit, int& d_miss) : m_memory(mem), m_clock(clock),c_hit(d_hit), miss(d_miss) {}	//Constructor, initialize the reference of m_memory
 	~Cache_Memory() {}	//Destructor
 
 	void cache(unsigned short MAR, unsigned short& MDR, ACTION rw, SIZE bw = WORD);	//cache function, will be called by CPU when access data in cache
+
+	int& c_hit;
+	int& miss;
 
 #ifdef HYBRID_CACHE
 	struct page cache_mem[NUM_OF_PAGE];	//cache memory cont

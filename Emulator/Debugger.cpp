@@ -38,7 +38,7 @@ int help_func()
 			<< "13: Exit\n"
 			<< "Choose a command, type the number of command:	";
 		std::cin >> user_cmd;
-		if (user_cmd >= 0 && user_cmd <= 13)	//if has vaild command
+		if (user_cmd >= 0 && user_cmd <= 14)	//if has vaild command
 			wait_for_cmd = false;	//stop waiting command
 		else
 			std::cout << "Wrong command, input again!\n";
@@ -221,7 +221,7 @@ void Debugger::run_debugger()
 	signal(SIGINT, (_crt_signal_t)sigint_hdlr);	//Call signal() - bind sigint_hdlr to SIGINT 
 	unsigned int clock = 0;	//Initialize clock, the reason I put clock here is because clock usually are located outside CPU, such us matherboard
 	Memory mem(clock);	//initialize memory
-	Cache_Memory cache(mem, clock);	//initialize cache
+	Cache_Memory cache(mem, clock,hit,miss);	//initialize cache
 	CPU m_CPU(mem, cache, clock);
 	int user_cmd=0;	//user's command
 	debugger_is_running = true;
@@ -362,6 +362,11 @@ void Debugger::run_debugger()
 		case 13:	//exit debugger
 		{
 			debugger_is_running = false;
+			break;
+		}
+		case 14:
+		{
+			std::cout << "hit:" << hit << "\nmiss:" << miss << "\n";
 			break;
 		}
 		default:	//other wise
